@@ -1,0 +1,16 @@
+Add soversion to the shared object.
+https://github.com/lemire/simdjson/issues/52
+diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
+index ea48953..dd7f2a4 100644
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -32,7 +32,8 @@ if(NOT MSVC)
+ ## We output the library at the root of the current directory where cmake is invoked
+ ## This is handy but Visual Studio will happily ignore us
+ set_target_properties(${SIMDJSON_LIB_NAME} PROPERTIES
+-  LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
++  LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
++  SOVERSION 0)
+ MESSAGE( STATUS "Library output directory (does not apply to Visual Studio): " ${CMAKE_BINARY_DIR})
+ endif()
+

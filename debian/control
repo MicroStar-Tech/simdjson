@@ -1,0 +1,42 @@
+Source: simdjson
+Section: libs
+Homepage: https://github.com/lemire/simdjson
+Priority: optional
+Standards-Version: 4.3.0
+Vcs-Browser: https://salsa.debian.org/debian/simdjson
+Vcs-Git: https://salsa.debian.org/debian/simdjson.git
+Maintainer: Mo Zhou <cdluminate@gmail.com>
+Build-Depends: debhelper-compat (= 11),
+
+Package: libsimdjson0
+Architecture: any-amd64
+Depends: ${misc:Depends}, ${shlibs:Depends},
+Description: Parsing gigabytes of JSON per second (shared object)
+ JSON documents are everywhere on the Internet. Servers spend a lot of time
+ parsing these documents. We want to accelerate the parsing of JSON per se
+ using commonly available SIMD instructions as much as possible while doing
+ full validation (including character encoding).
+ .
+ It has a special requirement:
+  - A processor with AVX2 (i.e., Intel processors starting with the Haswell
+    microarchitecture released 2013, and processors from AMD starting with
+    the Ryzen)
+ .
+ This package ships the shared object.
+
+Package: libsimdjson-dev
+Section: libdevel
+Architecture: any-amd64
+Depends: ${misc:Depends},
+Description: Parsing gigabytes of JSON per second (development)
+ JSON documents are everywhere on the Internet. Servers spend a lot of time
+ parsing these documents. We want to accelerate the parsing of JSON per se
+ using commonly available SIMD instructions as much as possible while doing
+ full validation (including character encoding).
+ .
+ It has a special requirement:
+  - A processor with AVX2 (i.e., Intel processors starting with the Haswell
+    microarchitecture released 2013, and processors from AMD starting with
+    the Ryzen)
+ .
+ This package ships development files
