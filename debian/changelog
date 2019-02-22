@@ -1,5 +1,5 @@
-simdjson (0.0~git20190221.3757349-1) UNRELEASED; urgency=low
+simdjson (0.0~git20190221.3757349-1) unstable; urgency=low
 
   * Initial release. (Closes: #922952)
 
- -- Mo Zhou <cdluminate@gmail.com>  Fri, 22 Feb 2019 09:19:08 +0000
+ -- Mo Zhou <cdluminate@gmail.com>  Fri, 22 Feb 2019 10:01:20 +0000
