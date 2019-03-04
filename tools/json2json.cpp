@@ -48,7 +48,7 @@ int main(int argc, char *argv[]) {
 #ifndef _MSC_VER
   int c;
 
-  while ((c = getopt(argc, argv, "da")) != -1)
+  while ((c = getopt(argc, argv, "da")) != -1) {
     switch (c) {
     case 'd':
       rawdump = true;
@@ -59,6 +59,7 @@ int main(int argc, char *argv[]) {
     default:
       abort();
     }
+}
 #else
   int optind = 1;
 #endif
@@ -86,9 +87,9 @@ int main(int argc, char *argv[]) {
     std::cerr << "failed to allocate memory" << std::endl;
     return EXIT_FAILURE;
   }
-  bool is_ok = json_parse(p, pj); // do the parsing, return false on error
+  int res = json_parse(p, pj); // do the parsing, return false on error
   aligned_free((void *)p.data());
-  if (!is_ok) {
+  if (res) {
     std::cerr << " Parsing failed. " << std::endl;
     return EXIT_FAILURE;
   }
@@ -100,7 +101,7 @@ int main(int argc, char *argv[]) {
     }
     compute_dump(pjh);
   } else {
-    is_ok = rawdump ? pj.dump_raw_tape(std::cout) : pj.printjson(std::cout);
+    const bool is_ok = rawdump ? pj.dump_raw_tape(std::cout) : pj.printjson(std::cout);
     if (!is_ok) {
       std::cerr << " Could not print out parsed result. " << std::endl;
       return EXIT_FAILURE;

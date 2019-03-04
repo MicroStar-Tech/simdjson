@@ -19,7 +19,11 @@ set(SIMDJSON_SRC
     jsonminifier.cpp
     jsonparser.cpp
     stage1_find_marks.cpp
-    stage2_build_tape.cpp)
+    stage2_build_tape.cpp
+    parsedjson.cpp
+    parsedjsoniterator.cpp
+    simdjson.cpp
+    )
          
 add_library(${SIMDJSON_LIB_NAME} ${SIMDJSON_LIB_TYPE} ${SIMDJSON_SRC})
 target_include_directories(${SIMDJSON_LIB_NAME}
@@ -32,7 +36,9 @@ if(NOT MSVC)
 ## We output the library at the root of the current directory where cmake is invoked
 ## This is handy but Visual Studio will happily ignore us
 set_target_properties(${SIMDJSON_LIB_NAME} PROPERTIES
-  LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+  LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+  VERSION ${SIMDJSON_LIB_VERSION}
+  SOVERSION ${SIMDJSON_LIB_SOVERSION})
 MESSAGE( STATUS "Library output directory (does not apply to Visual Studio): " ${CMAKE_BINARY_DIR})
 endif()
 
