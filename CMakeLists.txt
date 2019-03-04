@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.8...3.13)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_MACOSX_RPATH OFF)
@@ -9,6 +9,8 @@ endif()
 
 project(simdjson)
 set(SIMDJSON_LIB_NAME simdjson)
+set(SIMDJSON_LIB_VERSION "0.0.1" CACHE STRING "simdjson library version")
+set(SIMDJSON_LIB_SOVERSION "0.0.1" CACHE STRING "simdjson library soversion")
 
 if(NOT MSVC)
 option(SIMDJSON_BUILD_STATIC "Build a static library" OFF) # turning it on disables the production of a dynamic library
@@ -34,3 +36,18 @@ add_subdirectory(src)
 add_subdirectory(tools)
 add_subdirectory(tests)
 add_subdirectory(benchmark)
+
+set(CPACK_PACKAGE_VENDOR "Daniel Lemire")
+set(CPACK_PACKAGE_CONTACT "lemire@gmail.com")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Parsing gigabytes of JSON per second")
+set(CPACK_PACKAGE_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
+set(CPACK_PACKAGE_VERSION_MINOR ${PROJECT_VERSION_MINOR})
+set(CPACK_PACKAGE_VERSION_PATCH ${PROJECT_VERSION_PATCH})
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
+set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
+
+set(CPACK_RPM_PACKAGE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
+
+set(CPACK_SOURCE_GENERATOR "TGZ;ZIP")
+
+include(CPack)

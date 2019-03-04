@@ -18,10 +18,14 @@ $SCRIPTPATH/src/jsonminifier.cpp
 $SCRIPTPATH/src/jsonparser.cpp
 $SCRIPTPATH/src/stage1_find_marks.cpp
 $SCRIPTPATH/src/stage2_build_tape.cpp
+$SCRIPTPATH/src/parsedjson.cpp
+$SCRIPTPATH/src/parsedjsoniterator.cpp
 "
 
 # order matters
 ALLCHEADERS="
+$SCRIPTPATH/include/simdjson/simdjson_version.h
+$SCRIPTPATH/include/simdjson/simdjson.h
 $SCRIPTPATH/include/simdjson/portability.h
 $SCRIPTPATH/include/simdjson/common_defs.h
 $SCRIPTPATH/include/simdjson/jsoncharutils.h
@@ -51,10 +55,11 @@ function stripinc()
 }
 function dofile()
 {
-    echo "/* begin file $1 */"
+    RELFILE=${1#"$SCRIPTPATH/"}
+    echo "/* begin file $RELFILE */"
     # echo "#line 8 \"$1\"" ## redefining the line/file is not nearly as useful as it sounds for debugging. It breaks IDEs.
     stripinc < $1
-    echo "/* end file $1 */"
+    echo "/* end file $RELFILE */"
 }
 
 timestamp=$(date)
@@ -94,7 +99,7 @@ cat <<< '
 #include "simdjson.h"
 #include "simdjson.cpp"
 int main(int argc, char *argv[]) {
-  const char * filename = argv[1]; 
+  const char * filename = argv[1];
   std::string_view p = get_corpus(filename);
   ParsedJson pj = build_parsed_json(p); // do the parsing
   if( ! pj.isValid() ) {
@@ -117,18 +122,19 @@ echo "Giving final instructions:"
 CPPBIN=${DEMOCPP%%.*}
 
 echo "Try :"
-echo "c++ -march=native -O3 -std=c++11 -o ${CPPBIN} ${DEMOCPP}  && ./${CPPBIN} jsonexamples/twitter.json "
+echo "c++ -march=native -O3 -std=c++17 -o ${CPPBIN} ${DEMOCPP}  && ./${CPPBIN} ../jsonexamples/twitter.json "
 
 SINGLEHDR=$SCRIPTPATH/singleheader
 echo "Copying files to $SCRIPTPATH/singleheader "
 mkdir -p $SINGLEHDR
-echo "c++ -march=native -O3 -std=c++11 -o ${CPPBIN} ${DEMOCPP}  && ./${CPPBIN} ../jsonexamples/twitter.json " > $SINGLEHDR/README.md
+echo "c++ -march=native -O3 -std=c++17 -o ${CPPBIN} ${DEMOCPP}  && ./${CPPBIN} ../jsonexamples/twitter.json " > $SINGLEHDR/README.md
 cp ${AMAL_C} ${AMAL_H}  ${DEMOCPP} $SINGLEHDR
 ls $SINGLEHDR
+
+cd $SINGLEHDR && c++ -march=native -O3 -std=c++17 -o ${CPPBIN} ${DEMOCPP}  && ./${CPPBIN} ../jsonexamples/twitter.json
 
 lowercase(){
     echo "$1" | tr 'A-Z' 'a-z'
 }
 
 OS=`lowercase \`uname\``
-
