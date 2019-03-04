@@ -1,16 +1,14 @@
-Add soversion to the shared object.
-https://github.com/lemire/simdjson/issues/52
-diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
-index ea48953..dd7f2a4 100644
---- a/src/CMakeLists.txt
-+++ b/src/CMakeLists.txt
-@@ -32,7 +32,8 @@ if(NOT MSVC)
- ## We output the library at the root of the current directory where cmake is invoked
- ## This is handy but Visual Studio will happily ignore us
- set_target_properties(${SIMDJSON_LIB_NAME} PROPERTIES
--  LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
-+  LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
-+  SOVERSION 0)
- MESSAGE( STATUS "Library output directory (does not apply to Visual Studio): " ${CMAKE_BINARY_DIR})
- endif()
-
+https://github.com/lemire/simdjson/pull/98
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 7ded8f6..ed90934 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -10,7 +10,7 @@ endif()
+ project(simdjson)
+ set(SIMDJSON_LIB_NAME simdjson)
+ set(SIMDJSON_LIB_VERSION "0.0.1" CACHE STRING "simdjson library version")
+-set(SIMDJSON_LIB_SOVERSION "0.0.1" CACHE STRING "simdjson library soversion")
++set(SIMDJSON_LIB_SOVERSION "0" CACHE STRING "simdjson library soversion")
+ 
+ if(NOT MSVC)
+ option(SIMDJSON_BUILD_STATIC "Build a static library" OFF) # turning it on disables the production of a dynamic library
