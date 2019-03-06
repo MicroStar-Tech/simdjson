@@ -1,8 +1,8 @@
-simdjson (0.0~git20190303.ec2b664-1) UNRELEASED; urgency=medium
+simdjson (0.0~git20190306.6628c36-1) UNRELEASED; urgency=medium
 
-  * New upstream version 0.0~git20190303.ec2b664
+  * New upstream version 0.0~git20190306.6628c36
 
- -- Mo Zhou <cdluminate@gmail.com>  Mon, 04 Mar 2019 02:59:30 +0000
+ -- Mo Zhou <cdluminate@gmail.com>  Wed, 06 Mar 2019 01:53:15 +0000
 
 simdjson (0.0~git20190221.3757349-1) unstable; urgency=low
 
