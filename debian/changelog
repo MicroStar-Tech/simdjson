@@ -1,8 +1,10 @@
-simdjson (0.0~git20190306.6628c36-1) UNRELEASED; urgency=medium
+simdjson (0.0~git20190306.6628c36-1) unstable; urgency=low
 
   * New upstream version 0.0~git20190306.6628c36
+  * Reflect changes in installation layout due to upstream cmake change.
+  * Update copyright.
 
- -- Mo Zhou <cdluminate@gmail.com>  Wed, 06 Mar 2019 01:53:15 +0000
+ -- Mo Zhou <cdluminate@gmail.com>  Wed, 06 Mar 2019 02:10:22 +0000
 
 simdjson (0.0~git20190221.3757349-1) unstable; urgency=low
 
