@@ -14,7 +14,12 @@ License: Expat
 
 Files: ./windows/dirent_portable.h
 Copyright: 2006-2012, Toni Ronkko
-License: Expat-and-or-public-domain
+License: Expat
+Comment:
+ The code of the scandir(...) method come from the musl library (http://www.musl-libc.org/)
+ (MIT licensed, Copyright © 2005-2014 Rich Felker, et al.).
+ .
+ The code of the alphasort(...) method and of all the other minor modifications is in the public domain.
 
 Files: debian/*
 Copyright: 2019, Mo Zhou <cdluminate@gmail.com>
