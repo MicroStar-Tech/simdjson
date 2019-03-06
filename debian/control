@@ -39,4 +39,4 @@ Description: Parsing gigabytes of JSON per second (development)
     microarchitecture released 2013, and processors from AMD starting with
     the Ryzen)
  .
- This package ships development files
+ This package ships development files.
