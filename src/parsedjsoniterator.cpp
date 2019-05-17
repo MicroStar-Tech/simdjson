@@ -1,27 +1,34 @@
 #include "simdjson/parsedjson.h"
 #include "simdjson/common_defs.h"
+#include <iterator>
 
 ParsedJson::iterator::iterator(ParsedJson &pj_) : pj(pj_), depth(0), location(0), tape_length(0), depthindex(nullptr) {
-        if(pj.isValid()) {
-            depthindex = new scopeindex_t[pj.depthcapacity];
-            if(depthindex == nullptr) { return;
-}
-            depthindex[0].start_of_scope = location;
-            current_val = pj.tape[location++];
-            current_type = (current_val >> 56);
-            depthindex[0].scope_type = current_type;
-            if (current_type == 'r') {
-              tape_length = current_val & JSONVALUEMASK;
-              if(location < tape_length) {
+        if(!pj.isValid()) {
+            throw InvalidJSON();
+        }
+        depthindex = new scopeindex_t[pj.depthcapacity];
+        // memory allocation would throw
+        //if(depthindex == nullptr) { 
+        //    return;
+        //}
+        depthindex[0].start_of_scope = location;
+        current_val = pj.tape[location++];
+        current_type = (current_val >> 56);
+        depthindex[0].scope_type = current_type;
+        if (current_type == 'r') {
+            tape_length = current_val & JSONVALUEMASK;
+            if(location < tape_length) {
                 current_val = pj.tape[location];
                 current_type = (current_val >> 56);
                 depth++;
                 depthindex[depth].start_of_scope = location;
                 depthindex[depth].scope_type = current_type;
               }
-            }
+        } else {
+            // should never happen
+            throw InvalidJSON();
         }
-    }
+}
 
 ParsedJson::iterator::~iterator() {
       delete[] depthindex;
@@ -29,14 +36,12 @@ ParsedJson::iterator::~iterator() {
 
 ParsedJson::iterator::iterator(const iterator &o):
     pj(o.pj), depth(o.depth), location(o.location),
-    tape_length(o.tape_length), current_type(o.current_type),
+    tape_length(0), current_type(o.current_type),
     current_val(o.current_val), depthindex(nullptr) {
     depthindex = new scopeindex_t[pj.depthcapacity];
-    if(depthindex != nullptr) {
-        memcpy(o.depthindex, depthindex, pj.depthcapacity * sizeof(depthindex[0]));
-    } else {
-        tape_length = 0;
-    }
+    // allocation might throw
+    memcpy(depthindex, o.depthindex, pj.depthcapacity * sizeof(depthindex[0]));
+    tape_length = o.tape_length;
 }
 
 ParsedJson::iterator::iterator(iterator &&o):
@@ -74,30 +79,29 @@ uint8_t ParsedJson::iterator::get_scope_type() const {
 
 bool ParsedJson::iterator::move_forward() {
     if(location + 1 >= tape_length) {
-    return false; // we are at the end!
-    }
-    // we are entering a new scope
-    if ((current_type == '[') || (current_type == '{')){
-    depth++;
-    depthindex[depth].start_of_scope = location;
-    depthindex[depth].scope_type = current_type;
-    }
-    location = location + 1;
-    current_val = pj.tape[location];
-    current_type = (current_val >> 56);
-    // if we encounter a scope closure, we need to move up
-    while ((current_type == ']') || (current_type == '}')) {
-    if(location + 1 >= tape_length) {
         return false; // we are at the end!
     }
-    depth--;
-    if(depth == 0) {
-        return false; // should not be necessary
+
+    if ((current_type == '[') || (current_type == '{')){
+        // We are entering a new scope
+        depth++;
+        depthindex[depth].start_of_scope = location;
+        depthindex[depth].scope_type = current_type;
+    } else if ((current_type == ']') || (current_type == '}')) {
+        // Leaving a scope.
+        depth--;
+        if(depth == 0) {
+            // Should not be necessary
+            return false;
+        }
+    } else if ((current_type == 'd') || (current_type == 'l')) {
+        // d and l types use 2 locations on the tape, not just one.
+        location += 1;
     }
-    location = location + 1;
+
+    location += 1;
     current_val = pj.tape[location];
     current_type = (current_val >> 56);
-    }
     return true;
 }
 
@@ -107,23 +111,31 @@ uint8_t ParsedJson::iterator::get_type()  const {
 
 
 int64_t ParsedJson::iterator::get_integer()  const {
-    if(location + 1 >= tape_length) { return 0;// default value in case of error
-}
+    if(location + 1 >= tape_length) { 
+      return 0;// default value in case of error
+    }
     return static_cast<int64_t>(pj.tape[location + 1]);
 }
 
 double ParsedJson::iterator::get_double()  const {
-    if(location + 1 >= tape_length) { return NAN;// default value in case of error
-}
+    if(location + 1 >= tape_length) { 
+      return NAN;// default value in case of error
+    }
     double answer;
     memcpy(&answer, & pj.tape[location + 1], sizeof(answer));
     return answer;
 }
 
 const char * ParsedJson::iterator::get_string() const {
-    return  reinterpret_cast<const char *>(pj.string_buf + (current_val & JSONVALUEMASK)) ;
+   return  reinterpret_cast<const char *>(pj.string_buf + (current_val & JSONVALUEMASK) + sizeof(uint32_t)) ;
 }
 
+
+uint32_t ParsedJson::iterator::get_string_length() const {
+    uint32_t answer;
+    memcpy(&answer, reinterpret_cast<const char *>(pj.string_buf + (current_val & JSONVALUEMASK)), sizeof(uint32_t));
+    return answer;
+}
 
 bool ParsedJson::iterator::is_object_or_array() const {
     return is_object_or_array(get_type());
@@ -149,20 +161,33 @@ bool ParsedJson::iterator::is_double() const {
     return get_type() == 'd';
 }
 
+bool ParsedJson::iterator::is_true() const {
+    return get_type() == 't';
+}
+
+bool ParsedJson::iterator::is_false() const {
+    return get_type() == 'f';
+}
+
+bool ParsedJson::iterator::is_null() const {
+    return get_type() == 'n';
+}
+
 bool ParsedJson::iterator::is_object_or_array(uint8_t type) {
     return (type == '[' || (type == '{'));
 }
 
 bool ParsedJson::iterator::move_to_key(const char * key) {
     if(down()) {
-    do {
+      do {
         assert(is_string());
-        bool rightkey = (strcmp(get_string(),key)==0);
+        bool rightkey = (strcmp(get_string(),key)==0);// null chars would fool this
         next();
-        if(rightkey) { return true;
-}
-    } while(next());
-    assert(up());// not found
+        if(rightkey) { 
+          return true;
+        }
+      } while(next());
+      assert(up());// not found
     }
     return false;
 }
@@ -261,15 +286,17 @@ void ParsedJson::iterator::to_start_scope()  {
 }
 
 bool ParsedJson::iterator::print(std::ostream &os, bool escape_strings) const {
-    if(!isOk()) { return false;
-}
+    if(!isOk()) { 
+      return false;
+    }
     switch (current_type) {
     case '"': // we have a string
     os << '"';
     if(escape_strings) {
-        print_with_escapes(get_string(), os);
+        print_with_escapes(get_string(), os, get_string_length());
     } else {
-        os << get_string();
+        // was: os << get_string();, but given that we can include null chars, we have to do something crazier:
+        std::copy(get_string(), get_string() + get_string_length(), std::ostream_iterator<char>(os));
     }
     os << '"';
     break;

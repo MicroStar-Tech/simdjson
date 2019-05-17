@@ -30,7 +30,7 @@ public:
   ParsedJson(ParsedJson && p);
 
   // if needed, allocate memory so that the object is able to process JSON
-  // documents having up to len butes and maxdepth "depth"
+  // documents having up to len bytes and maxdepth "depth"
   WARN_UNUSED
   bool allocateCapacity(size_t len, size_t maxdepth = DEFAULTMAXDEPTH);
 
@@ -89,7 +89,14 @@ public:
       tape[saved_loc] |= val;
   }
 
+  struct InvalidJSON : public std::exception {
+	const char * what () const throw () {
+ 	     return "JSON document is invalid";
+    }
+  };
+
   struct iterator {
+    // might throw InvalidJSON if ParsedJson is invalid
     explicit iterator(ParsedJson &pj_);
     ~iterator();
 
@@ -125,7 +132,11 @@ public:
     // get the string value at this node (NULL ended); valid only if we're at "
     // note that tabs, and line endings are escaped in the returned value (see print_with_escapes)
     // return value is valid UTF-8
+    // It may contain NULL chars within the string: get_string_length determines the true 
+    // string length.
     const char * get_string() const;
+
+    uint32_t get_string_length() const;
 
     // get the double value at this node; valid only if
     // we're at "d"
@@ -143,12 +154,21 @@ public:
 
     bool is_double() const;
 
+    bool is_true() const;
+
+    bool is_false() const;
+
+    bool is_null() const;
+
     static bool is_object_or_array(uint8_t type);
 
     // when at {, go one level deep, looking for a given key
     // if successful, we are left pointing at the value,
     // if not, we are still pointing at the object ({)
     // (in case of repeated keys, this only finds the first one)
+    // We seek the key using C's strcmp so if your JSON strings contain
+    // NULL chars, this would trigger a false positive: if you expect that
+    // to be the case, take extra precautions.
     bool move_to_key(const char * key);
 
     // throughout return true if we can do the navigation, false

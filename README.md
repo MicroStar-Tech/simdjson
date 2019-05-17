@@ -1,16 +1,25 @@
-# simdjson : Parsing gigabytes of JSON per second
-
+#  simdjson : Parsing gigabytes of JSON per second
 [![Build Status](https://cloud.drone.io/api/badges/lemire/simdjson/status.svg)](https://cloud.drone.io/lemire/simdjson/)
 [![CircleCI](https://circleci.com/gh/lemire/simdjson.svg?style=svg)](https://circleci.com/gh/lemire/simdjson)
+[![Build Status](https://img.shields.io/appveyor/ci/lemire/simdjson.svg)](https://ci.appveyor.com/project/lemire/simdjson)
 [![][license img]][license]
+
 
 ## A C++ library to see how fast we can parse JSON with complete validation.
 
 JSON documents are everywhere on the Internet. Servers spend a lot of time parsing these documents. We want to accelerate the parsing of JSON per se using commonly available SIMD instructions as much as possible while doing full validation (including character encoding).
 
+<img src="images/logo.png" width="10%">
+
+
 ## Paper
 
 A description of the design and implementation of simdjson appears at https://arxiv.org/abs/1902.08318 and an informal blog post providing some background and context is at https://branchfree.org/2019/02/25/paper-parsing-gigabytes-of-json-per-second/.
+
+Some people [enjoy reading our paper](https://arxiv.org/abs/1902.08318):
+
+[<img src="images/halvarflake.png" width="50%">](https://twitter.com/halvarflake/status/1118459536686362625)
+
 
 ## Performance results
 
@@ -56,8 +65,8 @@ Under Windows, we build some tools using the windows/dirent_portable.h file (whi
 
 const char * filename = ... //
 
-// use whatever means you want to get a string of your JSON document
-std::string_view p = get_corpus(filename);
+// use whatever means you want to get a string (UTF-8) of your JSON document
+padded_string p = get_corpus(filename); 
 ParsedJson pj;
 pj.allocateCapacity(p.size()); // allocate memory for parsing up to p.size() bytes
 const int res = json_parse(p, pj); // do the parsing, return 0 on success
@@ -66,10 +75,8 @@ if (res != 0) {
     // You can use the "simdjson/simdjson.h" header to access the error message
     std::cout << "Error parsing:" << simdjson::errorMsg(res) << std::endl;
 }
-// You can safely delete the string content
-free((void*)p.data());
 // the ParsedJson document can be used here
-// js can be reused with other json_parse calls.
+// pj can be reused with other json_parse calls.
 ```
 
 It is also possible to use a simpler API if you do not mind having the overhead
@@ -81,13 +88,49 @@ of memory allocation with each new JSON document:
 /...
 
 const char * filename = ... //
-std::string_view p = get_corpus(filename);
+padding_string p = get_corpus(filename);
 ParsedJson pj = build_parsed_json(p); // do the parsing
-// you no longer need p at this point, can do aligned_free((void*)p.data())
 if( ! pj.isValid() ) {
     // something went wrong
 }
 ```
+
+Though the `padded_string` class is recommended for best performance, you can call `json_parse` and `build_parsed_json`, passing a standard `std::string` object.
+
+
+```C
+#include "simdjson/jsonparser.h"
+
+/...
+std::string mystring = ... //
+ParsedJson pj;
+pj.allocateCapacity(mystring.size()); // allocate memory for parsing up to p.size() bytes
+// std::string may not overallocate so a copy will be needed
+const int res = json_parse(mystring, pj); // do the parsing, return 0 on success
+// parsing is done!
+if (res != 0) {
+    // You can use the "simdjson/simdjson.h" header to access the error message
+    std::cout << "Error parsing:" << simdjson::errorMsg(res) << std::endl;
+}
+// pj can be reused with other json_parse calls.
+```
+
+or
+
+```C
+#include "simdjson/jsonparser.h"
+
+/...
+
+std::string mystring = ... //
+// std::string may not overallocate so a copy will be needed
+ParsedJson pj = build_parsed_json(mystring); // do the parsing
+if( ! pj.isValid() ) {
+    // something went wrong
+}
+```
+
+As needed, the `json_parse` and `build_parsed_json` functions copy the input data to a temporary buffer readable up to SIMDJSON_PADDING bytes beyond the end of the data. 
 
 ## Usage: easy single-header version
 
@@ -101,7 +144,7 @@ copy the files in your project in your include path. You can then include them q
 #include "simdjson.cpp"
 int main(int argc, char *argv[]) {
   const char * filename = argv[1];
-  std::string_view p = get_corpus(filename);
+  padded_string p = get_corpus(filename);
   ParsedJson pj = build_parsed_json(p); // do the parsing
   if( ! pj.isValid() ) {
     std::cout << "not valid" << std::endl;
@@ -112,7 +155,17 @@ int main(int argc, char *argv[]) {
 }
 ```
 
+We require hardware support for AVX2 instructions. You have to make sure that you instruct your 
+compiler to use these instructions as needed. Under compilers such as GNU GCC or LLVM clang, the
+flag `-march=native` used on a recent Intel processor (Haswell or better) is sufficient. For portability
+of the binary files you can also specify directly the Haswell processor (`-march=haswell`). You may 
+also use the flags `-mavx2 -mbmi2`. Under Visual Studio, you need to target x64 and add the 
+flag `/arch:AVX2`. 
+
+
 Note: In some settings, it might be desirable to precompile `simdjson.cpp` instead of including it.
+
+
 
 ## Usage (old-school Makefile on platforms like Linux or macOS)
 
@@ -203,6 +256,38 @@ We assume you have a common Windows PC with at least Visual Studio 2017 and an x
 - Type `cmake -DCMAKE_GENERATOR_PLATFORM=x64 ..` in the shell while in the `VisualStudio` repository. (Alternatively, if you want to build a DLL, you may use the command line `cmake -DCMAKE_GENERATOR_PLATFORM=x64 -DSIMDJSON_BUILD_STATIC=OFF ..`.)
 - This last command created a Visual Studio solution file in the newly created directory (e.g., `simdjson.sln`). Open this file in Visual Studio. You should now be able to build the project and run the tests. For example, in the `Solution Explorer` window (available from the `View` menu), right-click `ALL_BUILD` and select `Build`. To test the code, still in the `Solution Explorer` window, select `RUN_TESTS` and select `Build`.
 
+
+## Usage (Using `vcpkg` on Windows, Linux and MacOS)
+
+[vcpkg](https://github.com/Microsoft/vcpkg) users on Windows, Linux and MacOS can download and install `simdjson` with one single command from their favorite shell.
+
+On Linux and MacOS:
+
+```
+$ ./vcpkg install simdjson
+```
+
+will build and install `simdjson` as a static library.
+
+On Windows (64-bit):
+
+```
+.\vcpkg.exe install simdjson:x64-windows
+```
+
+will build and install `simdjson` as a shared library.
+
+```
+.\vcpkg.exe install simdjson:x64-windows-static  
+```
+
+will build and install `simdjson` as a static library.
+
+These commands will also print out instructions on how to use the library from MSBuild or CMake-based projects.
+
+If you find the version of `simdjson` shipped with `vcpkg` is out-of-date, feel free to report it to `vcpkg` community either by submiting an issue or by creating a PR.
+
+
 ## Tools
 
 - `json2json mydoc.json` parses the document, constructs a model and then dumps back the result to standard output.
@@ -211,15 +296,15 @@ We assume you have a common Windows PC with at least Visual Studio 2017 and an x
 
 ## Scope
 
-We provide a fast parser. It fully validates the input according to the various specifications.
+We provide a fast parser, that fully validates an input according to various specifications.
 The parser builds a useful immutable (read-only) DOM (document-object model) which can be later accessed.
 
 To simplify the engineering, we make some assumptions.
 
-- We support UTF-8 (and thus ASCII), nothing else (no Latin, no UTF-16). We do not believe that this is a genuine limitation in the sense that we do not think that there is any serious application that needs to process JSON data without an ASCII or UTF-8 encoding.
-- We store strings as NULL terminated C strings. Thus we implicitly assume that you do not include a NULL character within your string, which is allowed technically speaking if you escape it (\u0000).
-- We assume AVX2 support which is available in all recent mainstream x86 processors produced by AMD and Intel. No support for non-x86 processors is included though it can be done. We plan to support ARM processors (help is invited).
-- In cases of failure, we just report a failure without any indication as to the nature of the problem. (This can be easily improved without affecting performance.)
+- We support UTF-8 (and thus ASCII), nothing else (no Latin, no UTF-16). We do not believe this is a genuine limitation, because we do not think there is any serious application that needs to process JSON data without an ASCII or UTF-8 encoding.
+- All strings in the JSON document may have up to 4294967295 bytes in UTF-8 (4GB). To enforce this constraint, we refuse to parse a document that contains more than 4294967295 bytes (4GB). This should accommodate most JSON documents.
+- We assume AVX2 support, which is available in all recent mainstream x86 processors produced by AMD and Intel. No support for non-x86 processors is included, though it can be done. We plan to support ARM processors (help is invited).
+- In cases of failure, we report a failure without any indication to the nature of the problem. (This can be easily improved without affecting performance.)
 - As allowed by the specification, we allow repeated keys within an object (other parsers like sajson do the same).
 - Performance is optimized for JSON documents spanning at least a tens kilobytes up to many megabytes: the performance issues with having to parse many tiny JSON documents or one truly enormous JSON document are different.
 
@@ -360,9 +445,13 @@ make allparsingcompetition
 
 ## Other programming languages
 
+We distinguish between "bindings" (which just wrap the C++ code) and a port to another programming language (which reimplements everything).
+
 - [pysimdjson](https://github.com/TkTech/pysimdjson): Python bindings for the simdjson project.
-- [SimdJsonSharp](https://github.com/EgorBo/SimdJsonSharp): C# version for .NET Core
+- [simdjson-rs](https://github.com/Licenser/simdjson-rs): Rust port
+- [SimdJsonSharp](https://github.com/EgorBo/SimdJsonSharp): C# version for .NET Core (bindings and full port)
 - [simdjson_nodejs](https://github.com/luizperes/simdjson_nodejs): Node.js bindings for the simdjson project.
+- [simdjson_php](https://github.com/crazyxman/simdjson_php): PHP bindings for the simdjson project.
 
 ## Various References
 
@@ -414,11 +503,11 @@ A character is pseudo-structural if and only if:
 
 1. Not enclosed in quotes, AND
 2. Is a non-whitespace character, AND
-3. It's preceding character is either:
+3. Its preceding character is either:
    (a) a structural character, OR
    (b) whitespace.
 
-This helps as we redefine some new characters as pseudo-structural such as the characters 1, 1, G, n in the following:
+This helps as we redefine some new characters as pseudo-structural such as the characters 1, G, n in the following:
 
 > { "foo" : 1.5, "bar" : 1.5 GEOFF_IS_A_DUMMY bla bla , "baz", null }
 

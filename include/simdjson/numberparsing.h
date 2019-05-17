@@ -86,7 +86,7 @@ static inline bool is_integer(char c) {
 // probably frequent and it is hard than it looks. We are building all of this
 // just to differentiate between 0x1 (invalid), 0,1 (valid) 0e1 (valid)...
 const bool structural_or_whitespace_or_exponent_or_decimal_negated[256] = {
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
     1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1,
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1,
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1,
@@ -99,11 +99,13 @@ const bool structural_or_whitespace_or_exponent_or_decimal_negated[256] = {
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
 
 really_inline bool
-is_not_structural_or_whitespace_or_exponent_or_decimal(unsigned char c) {
+is_not_structural_or_whitespace_or_exponent_or_decimal_or_null(unsigned char c) {
   return structural_or_whitespace_or_exponent_or_decimal_negated[c];
 }
 
+#ifdef __AVX2__
 #define SWAR_NUMBER_PARSING
+#endif
 
 #ifdef SWAR_NUMBER_PARSING
 
@@ -113,6 +115,9 @@ is_not_structural_or_whitespace_or_exponent_or_decimal(unsigned char c) {
 // http://0x80.pl/articles/swar-digits-validate.html
 static inline bool is_made_of_eight_digits_fast(const char *chars) {
   uint64_t val;
+  // this can read up to 7 bytes beyond the buffer size, but we require 
+  // SIMDJSON_PADDING of padding
+  static_assert(7 <= SIMDJSON_PADDING);
   memcpy(&val, chars, 8);
   // a branchy method might be faster:
   // return (( val & 0xF0F0F0F0F0F0F0F0 ) == 0x3030303030303030)
@@ -126,12 +131,32 @@ static inline bool is_made_of_eight_digits_fast(const char *chars) {
 // this is more efficient apparently than the scalar code above (fewer instructions)
 static inline bool is_made_of_eight_digits_fast(const char *chars) {
   __m64 val;
+  // this can read up to 7 bytes beyond the buffer size, but we require 
+  // SIMDJSON_PADDING of padding
+  static_assert(7 <= SIMDJSON_PADDING);
   memcpy(&val, chars, 8);
   __m64 base = _mm_sub_pi8(val,_mm_set1_pi8('0'));
   __m64 basecmp = _mm_subs_pu8(base,_mm_set1_pi8(9));
   return _mm_cvtm64_si64(basecmp) == 0;
 }
 #endif
+
+// clang-format off
+/***
+Should parse_eight_digits_unrolled be out of the question, one could
+use a standard approach like the following:
+
+static inline uint32_t newparse_eight_digits_unrolled(const char *chars) {
+   uint64_t val;
+   memcpy(&val, chars, sizeof(uint64_t));  
+   val = (val & 0x0F0F0F0F0F0F0F0F) * 2561 >> 8;
+   val = (val & 0x00FF00FF00FF00FF) * 6553601 >> 16;
+   return (val & 0x0000FFFF0000FFFF) * 42949672960001 >> 32;
+}
+
+credit: https://johnnylee-sde.github.io/Fast-numeric-string-to-int/
+*/
+// clang-format on
 
 static inline uint32_t parse_eight_digits_unrolled(const char *chars) {
   // this actually computes *16* values so we are being wasteful.
@@ -247,14 +272,14 @@ parse_float(const uint8_t *const buf,
 #endif
       return false;
     }
-    int exponent = (negexp ? -expnumber : expnumber);
-    if ((exponent > 308) || (exponent < -308)) {
+    if (expnumber > 308) {
 // we refuse to parse this
 #ifdef JSON_TEST_NUMBERS // for unit testing
       foundInvalidNumber(buf + offset);
 #endif
       return false;
     }
+    int exponent = (negexp ? -expnumber : expnumber);
     i *= power_of_ten[308 + exponent];
   }
   if(is_not_structural_or_whitespace(*p)) {
@@ -331,7 +356,7 @@ static never_inline bool parse_large_integer(const uint8_t *const buf,
       return false; // overflow
     }
   }
-  int64_t signed_answer = negative ? -i : i;
+  int64_t signed_answer = negative ? -static_cast<int64_t>(i) : static_cast<int64_t>(i);
   pj.write_tape_s64(signed_answer);
 #ifdef JSON_TEST_NUMBERS // for unit testing
   foundInteger(signed_answer, buf + offset);
@@ -366,10 +391,10 @@ static really_inline bool parse_number(const uint8_t *const buf,
   }
   const char *const startdigits = p;
 
-  int64_t i;
+  uint64_t i; // an unsigned int avoids signed overflows (which are bad)
   if (*p == '0') { // 0 cannot be followed by an integer
     ++p;
-    if (is_not_structural_or_whitespace_or_exponent_or_decimal(*p)) {
+    if (is_not_structural_or_whitespace_or_exponent_or_decimal_or_null(*p)) {
 #ifdef JSON_TEST_NUMBERS // for unit testing
       foundInvalidNumber(buf + offset);
 #endif
@@ -416,7 +441,6 @@ static really_inline bool parse_number(const uint8_t *const buf,
     if (is_made_of_eight_digits_fast(p)) {
       i = i * 100000000 + parse_eight_digits_unrolled(p);
       p += 8;
-      // exponent -= 8;
     }
 #endif
     while (is_integer(*p)) {
@@ -447,11 +471,6 @@ static really_inline bool parse_number(const uint8_t *const buf,
     unsigned char digit = *p - '0';
     expnumber = digit;
     p++;
-    while (is_integer(*p)) {
-      digit = *p - '0';
-      expnumber = 10 * expnumber + digit;
-      ++p;
-    }
     if (is_integer(*p)) {
       digit = *p - '0';
       expnumber = 10 * expnumber + digit;
@@ -469,9 +488,15 @@ static really_inline bool parse_number(const uint8_t *const buf,
 #endif
       return false;
     }
+    if(expnumber > 308) {
+// we refuse to parse this
+#ifdef JSON_TEST_NUMBERS // for unit testing
+        foundInvalidNumber(buf + offset);
+#endif
+        return false;       
+    }
     exponent += (negexp ? -expnumber : expnumber);
   }
-  i = negative ? -i : i;
   if ((exponent != 0) || (expnumber != 0)) {
     if (unlikely(digitcount >= 19)) { // this is uncommon!!!
       // this is almost never going to get called!!!
@@ -488,16 +513,9 @@ static really_inline bool parse_number(const uint8_t *const buf,
       foundFloat(0.0, buf + offset);
 #endif
     } else {
-      if ((exponent > 308) || (exponent < -308)) {
-// we refuse to parse this
-#ifdef JSON_TEST_NUMBERS // for unit testing
-        foundInvalidNumber(buf + offset);
-#endif
-        return false;
-      }
       double d = i;
+      d = negative ? -d : d;
       d *= power_of_ten[308 + exponent];
-      // d = negative ? -d : d;
       pj.write_tape_double(d);
 #ifdef JSON_TEST_NUMBERS // for unit testing
       foundFloat(d, buf + offset);
@@ -508,6 +526,7 @@ static really_inline bool parse_number(const uint8_t *const buf,
       return parse_large_integer(buf, pj, offset,
                                  found_minus);
     }
+    i = negative ? 0-i : i;
     pj.write_tape_s64(i);
 #ifdef JSON_TEST_NUMBERS // for unit testing
     foundInteger(i, buf + offset);
