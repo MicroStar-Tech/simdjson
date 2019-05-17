@@ -1,3 +1,10 @@
+simdjson (0.1.2-1) UNRELEASED; urgency=medium
+
+  * watch: follow the releases instead of git head
+  * New upstream version 0.1.2
+
+ -- Mo Zhou <cdluminate@gmail.com>  Fri, 17 May 2019 01:59:42 +0000
+
 simdjson (0.0~git20190306.6628c36-1) unstable; urgency=low
 
   * New upstream version 0.0~git20190306.6628c36
