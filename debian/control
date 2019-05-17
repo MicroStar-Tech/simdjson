@@ -13,8 +13,8 @@ Architecture: any-amd64
 Depends: ${misc:Depends}, ${shlibs:Depends},
 Description: Parsing gigabytes of JSON per second (shared object)
  JSON documents are everywhere on the Internet. Servers spend a lot of time
- parsing these documents. We want to accelerate the parsing of JSON per se
- using commonly available SIMD instructions as much as possible while doing
+ parsing these documents. simdjson aims to accelerate the parsing of JSON per
+ se using commonly available SIMD instructions as much as possible while doing
  full validation (including character encoding).
  .
  It has a special requirement:
@@ -30,8 +30,8 @@ Architecture: any-amd64
 Depends: ${misc:Depends}, libsimdjson0 (= ${binary:Version}),
 Description: Parsing gigabytes of JSON per second (development)
  JSON documents are everywhere on the Internet. Servers spend a lot of time
- parsing these documents. We want to accelerate the parsing of JSON per se
- using commonly available SIMD instructions as much as possible while doing
+ parsing these documents. simdjson aims to accelerate the parsing of JSON per
+ se using commonly available SIMD instructions as much as possible while doing
  full validation (including character encoding).
  .
  It has a special requirement:
