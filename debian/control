@@ -27,7 +27,7 @@ Description: Parsing gigabytes of JSON per second (shared object)
 Package: libsimdjson-dev
 Section: libdevel
 Architecture: any-amd64
-Depends: ${misc:Depends},
+Depends: ${misc:Depends}, libsimdjson0 (= ${binary:Version}),
 Description: Parsing gigabytes of JSON per second (development)
  JSON documents are everywhere on the Internet. Servers spend a lot of time
  parsing these documents. We want to accelerate the parsing of JSON per se
