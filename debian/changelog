@@ -1,9 +1,12 @@
-simdjson (0.1.2-1) UNRELEASED; urgency=medium
+simdjson (0.1.2-1) unstable; urgency=medium
 
-  * watch: follow the releases instead of git head
   * New upstream version 0.1.2
+  * watch: follow the releases instead of git head
+  * The -dev package should depend on libsimdjson0 (= ${binary:Version}).
+  * Fix using-first-person-in-description.
+  * Add symbols control file for libsimdjson0.
 
- -- Mo Zhou <cdluminate@gmail.com>  Fri, 17 May 2019 01:59:42 +0000
+ -- Mo Zhou <cdluminate@gmail.com>  Fri, 17 May 2019 02:15:54 +0000
 
 simdjson (0.0~git20190306.6628c36-1) unstable; urgency=low
 
