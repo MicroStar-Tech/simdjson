@@ -75,14 +75,14 @@ inline void foundFloat(double result, const uint8_t *buf) {
   }
   if( fpclassify(expected) != fpclassify(result) ) {
     fprintf(stderr, "floats not in the same category expected: %f observed: %f \n", expected, result);
-    fprintf(stderr, "%.128s\n", buf);
+    fprintf(stderr, "%.32s\n", buf);
     parse_error |= PARSE_ERROR;
   }
   // we want to get some reasonable relative accuracy
-  else if (fabs(expected - result) / fmin(fabs(expected), fabs(result)) >
-      1e-14) {
+  else if (fabs(expected - result)  >
+      1e-14 * fmin(fabs(expected), fabs(result))) {
     fprintf(stderr, "parsed %.128e from \n", result);
-    fprintf(stderr, "       %.200s whereas strtod gives\n", buf);
+    fprintf(stderr, "       %.32s whereas strtod gives\n", buf);
     fprintf(stderr, "       %.128e,", expected);
     fprintf(stderr, " while parsing %s \n", fullpath);
     parse_error |= PARSE_ERROR;
@@ -128,9 +128,9 @@ bool validate(const char *dirname) {
       } else {
         strcpy(fullpath + dirlen, name);
       }
-      std::string_view p;
+      padded_string p;
       try {
-        p = get_corpus(fullpath);
+        get_corpus(fullpath).swap(p);
       } catch (const std::exception& e) { 
         std::cout << "Could not load the file " << fullpath << std::endl;
         return EXIT_FAILURE;
@@ -154,7 +154,6 @@ bool validate(const char *dirname) {
                float_count, invalid_count,
                int_count + float_count + invalid_count);
       }
-      aligned_free((void*)p.data());
       free(fullpath);
     }
   }

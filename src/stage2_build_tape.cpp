@@ -1,10 +1,3 @@
-#ifdef _MSC_VER
-/* Microsoft C/C++-compatible compiler */
-#include <intrin.h>
-#else
-#include <x86intrin.h>
-#endif
-
 #include <cassert>
 #include <cstring>
 
@@ -19,14 +12,15 @@
 #define PATH_SEP '/'
 
 
-using namespace std;
-
 WARN_UNUSED
 really_inline bool is_valid_true_atom(const uint8_t *loc) {
   uint64_t tv = *reinterpret_cast<const uint64_t *>("true    ");
   uint64_t mask4 = 0x00000000ffffffff;
   uint32_t error = 0;
   uint64_t locval; // we want to avoid unaligned 64-bit loads (undefined in C/C++)
+  // this can read up to 7 bytes beyond the buffer size, but we require 
+  // SIMDJSON_PADDING of padding
+  static_assert(sizeof(uint64_t) - 1 <= SIMDJSON_PADDING);
   std::memcpy(&locval, loc, sizeof(uint64_t));
   error = (locval & mask4) ^ tv;
   error |= is_not_structural_or_whitespace(loc[4]);
@@ -35,10 +29,21 @@ really_inline bool is_valid_true_atom(const uint8_t *loc) {
 
 WARN_UNUSED
 really_inline bool is_valid_false_atom(const uint8_t *loc) {
-  uint64_t fv = *reinterpret_cast<const uint64_t *>("false   ");
+  // We have to use an integer constant because the space in the cast
+  // below would lead to values illegally being qualified
+  // uint64_t fv = *reinterpret_cast<const uint64_t *>("false   ");
+  // using this constant (that is the same false) but nulls out the
+  // unused bits solves that
+  uint64_t fv = 0x00000065736c6166; // takes into account endianness
   uint64_t mask5 = 0x000000ffffffffff;
-  uint32_t error = 0;
+  // we can't use the 32 bit value for checking for errors otherwise
+  // the last character of false (it being 5 byte long!) would be
+  // ignored
+  uint64_t error = 0;
   uint64_t locval; // we want to avoid unaligned 64-bit loads (undefined in C/C++)
+  // this can read up to 7 bytes beyond the buffer size, but we require 
+  // SIMDJSON_PADDING of padding
+  static_assert(sizeof(uint64_t) - 1 <= SIMDJSON_PADDING);
   std::memcpy(&locval, loc, sizeof(uint64_t));
   error = (locval & mask5) ^ fv;
   error |= is_not_structural_or_whitespace(loc[5]);
@@ -51,6 +56,9 @@ really_inline bool is_valid_null_atom(const uint8_t *loc) {
   uint64_t mask4 = 0x00000000ffffffff;
   uint32_t error = 0;
   uint64_t locval; // we want to avoid unaligned 64-bit loads (undefined in C/C++)
+  // this can read up to 7 bytes beyond the buffer size, but we require 
+  // SIMDJSON_PADDING of padding
+  static_assert(sizeof(uint64_t) - 1 <= SIMDJSON_PADDING);
   std::memcpy(&locval, loc, sizeof(uint64_t));
   error = (locval & mask4) ^ nv;
   error |= is_not_structural_or_whitespace(loc[4]);
@@ -62,7 +70,7 @@ really_inline bool is_valid_null_atom(const uint8_t *loc) {
  * The JSON is parsed to a tape, see the accompanying tape.md file
  * for documentation.
  ***********/
-WARN_UNUSED
+WARN_UNUSED  ALLOW_SAME_PAGE_BUFFER_OVERRUN_QUALIFIER
 int unified_machine(const uint8_t *buf, size_t len, ParsedJson &pj) {
   uint32_t i = 0; // index of the structural character (0,1,2,3...)
   uint32_t idx;   // location of the structural character in the input (buf)
@@ -91,8 +99,8 @@ int unified_machine(const uint8_t *buf, size_t len, ParsedJson &pj) {
   pj.write_tape(0, 'r'); // r for root, 0 is going to get overwritten
   // the root is used, if nothing else, to capture the size of the tape
   depth++; // everything starts at depth = 1, depth = 0 is just for the root, the root may contain an object, an array or something else.
-  if (depth > pj.depthcapacity) {
-    goto fail;
+  if (depth >= pj.depthcapacity) {
+    return simdjson::DEPTH_ERROR;
   }
 
   UPDATE_CHAR();
@@ -105,8 +113,8 @@ int unified_machine(const uint8_t *buf, size_t len, ParsedJson &pj) {
     pj.ret_address[depth] = 's';
 #endif
     depth++;
-    if (depth > pj.depthcapacity) {
-      goto fail;
+    if (depth >= pj.depthcapacity) {
+      return simdjson::DEPTH_ERROR;
     }
     pj.write_tape(0, c); // strangely, moving this to object_begin slows things down
     goto object_begin;
@@ -118,8 +126,8 @@ int unified_machine(const uint8_t *buf, size_t len, ParsedJson &pj) {
     pj.ret_address[depth] = 's';
 #endif    
     depth++;
-    if (depth > pj.depthcapacity) {
-      goto fail;
+    if (depth >= pj.depthcapacity) {
+      return simdjson::DEPTH_ERROR;
     }
     pj.write_tape(0, c);
     goto array_begin;
@@ -320,8 +328,8 @@ object_key_state:
 #endif
     // we found an object inside an object, so we need to increment the depth
     depth++;
-    if (depth > pj.depthcapacity) {
-      goto fail;
+    if (depth >= pj.depthcapacity) {
+      return simdjson::DEPTH_ERROR;
     }
 
     goto object_begin;
@@ -337,8 +345,8 @@ object_key_state:
 #endif    
     // we found an array inside an object, so we need to increment the depth
     depth++;
-    if (depth > pj.depthcapacity) {
-      goto fail;
+    if (depth >= pj.depthcapacity) {
+      return simdjson::DEPTH_ERROR;
     }
     goto array_begin;
   }
@@ -452,8 +460,8 @@ main_array_switch:
 #endif
     // we found an object inside an array, so we need to increment the depth
     depth++;
-    if (depth > pj.depthcapacity) {
-      goto fail;
+    if (depth >= pj.depthcapacity) {
+      return simdjson::DEPTH_ERROR;
     }
 
     goto object_begin;
@@ -469,8 +477,8 @@ main_array_switch:
 #endif
     // we found an array inside an array, so we need to increment the depth
     depth++;
-    if (depth > pj.depthcapacity) {
-      goto fail;
+    if (depth >= pj.depthcapacity) {
+      return simdjson::DEPTH_ERROR;
     }
     goto array_begin;
   }

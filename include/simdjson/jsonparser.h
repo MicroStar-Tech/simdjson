@@ -1,48 +1,78 @@
 #ifndef SIMDJSON_JSONPARSER_H
 #define SIMDJSON_JSONPARSER_H
-
+#include <string>
 #include "simdjson/common_defs.h"
+#include "simdjson/padded_string.h"
 #include "simdjson/jsonioutil.h"
 #include "simdjson/parsedjson.h"
 #include "simdjson/stage1_find_marks.h"
 #include "simdjson/stage2_build_tape.h"
 #include "simdjson/simdjson.h"
 
-// Parse a document found in buf, need to preallocate ParsedJson.
+// Parse a document found in buf. 
+// You need to preallocate ParsedJson with a capacity of len (e.g., pj.allocateCapacity(len)).
 // Return 0 on success, an error code from simdjson/simdjson.h otherwise
-// You can also check validit by calling pj.isValid(). The same ParsedJson can be reused for other documents.
+// You can also check validity by calling pj.isValid(). The same ParsedJson can be reused for other documents.
 //
 // If reallocifneeded is true (default) then a temporary buffer is created when needed during processing
 // (a copy of the input string is made).
 // The input buf should be readable up to buf + len + SIMDJSON_PADDING if reallocifneeded is false,
 // all bytes at and after buf + len  are ignored (can be garbage).
+// The ParsedJson object can be reused.
 WARN_UNUSED
 int json_parse(const uint8_t *buf, size_t len, ParsedJson &pj, bool reallocifneeded = true);
 
-// Parse a document found in buf, need to preallocate ParsedJson.
-// Return false in case of a failure. You can also check validity
+// Parse a document found in buf.
+// You need to preallocate ParsedJson with a capacity of len (e.g., pj.allocateCapacity(len)).
+// Return SUCCESS (an integer = 1) in case of a success. You can also check validity
 // by calling pj.isValid(). The same ParsedJson can be reused for other documents.
 //
 // If reallocifneeded is true (default) then a temporary buffer is created when needed during processing
 // (a copy of the input string is made).
 // The input buf should be readable up to buf + len + SIMDJSON_PADDING  if reallocifneeded is false,
 // all bytes at and after buf + len  are ignored (can be garbage).
+// The ParsedJson object can be reused.
 WARN_UNUSED
 inline int json_parse(const char * buf, size_t len, ParsedJson &pj, bool reallocifneeded = true) {
   return json_parse(reinterpret_cast<const uint8_t *>(buf), len, pj, reallocifneeded);
 }
 
-// Parse a document found in buf, need to preallocate ParsedJson.
-// Return false in case of a failure. You can also check validity
+// Parse a document found in buf.
+// You need to preallocate ParsedJson with a capacity of len (e.g., pj.allocateCapacity(len)).
+// Return SUCCESS (an integer = 1) in case of a success. You can also check validity
 // by calling pj.isValid(). The same ParsedJson can be reused for other documents.
 //
 // If reallocifneeded is true (default) then a temporary buffer is created when needed during processing
 // (a copy of the input string is made).
-// the input s should be readable up to s.data() + s.size() + SIMDJSON_PADDING  if reallocifneeded is false,
+// The input s should be readable up to s.data() + s.size() + SIMDJSON_PADDING  if reallocifneeded is false,
 // all bytes at and after s.data()+s.size() are ignored (can be garbage).
+// The ParsedJson object can be reused.
+//WARN_UNUSED
+//inline int json_parse(const std::string_view &s, ParsedJson &pj, bool reallocifneeded = true) {
+//  return json_parse(s.data(), s.size(), pj, reallocifneeded);
+//}
+
+
+
+// Parse a document found in in string s.
+// You need to preallocate ParsedJson with a capacity of len (e.g., pj.allocateCapacity(len)).
+// Return SUCCESS (an integer = 1) in case of a success. You can also check validity
+// by calling pj.isValid(). The same ParsedJson can be reused for other documents.
+//
+// A temporary buffer is created when needed during processing
+// (a copy of the input string is made).
 WARN_UNUSED
-inline int json_parse(const std::string_view &s, ParsedJson &pj, bool reallocifneeded = true) {
-  return json_parse(s.data(), s.size(), pj, reallocifneeded);
+inline int json_parse(const std::string &s, ParsedJson &pj) {
+  return json_parse(s.data(), s.length(), pj, true);
+}
+
+// Parse a document found in in string s.
+// You need to preallocate ParsedJson with a capacity of len (e.g., pj.allocateCapacity(len)).
+// Return SUCCESS (an integer = 1) in case of a success. You can also check validity
+// by calling pj.isValid(). The same ParsedJson can be reused for other documents.
+WARN_UNUSED
+inline int json_parse(const padded_string &s, ParsedJson &pj) {
+  return json_parse(s.data(), s.length(), pj, false);
 }
 
 
@@ -75,8 +105,32 @@ WARN_UNUSED
 // (a copy of the input string is made).
 // The input s should be readable up to s.data() + s.size() + SIMDJSON_PADDING  if reallocifneeded is false,
 // all bytes at and after s.data()+s.size() are ignored (can be garbage).
-inline ParsedJson build_parsed_json(const std::string_view &s, bool reallocifneeded = true) {
-  return build_parsed_json(s.data(), s.size(), reallocifneeded);
+//inline ParsedJson build_parsed_json(const std::string_view &s, bool reallocifneeded = true) {
+ // return build_parsed_json(s.data(), s.size(), reallocifneeded);
+//}
+
+// Parse a document found in in string s.
+// You need to preallocate ParsedJson with a capacity of len (e.g., pj.allocateCapacity(len)).
+// Return SUCCESS (an integer = 1) in case of a success. You can also check validity
+// by calling pj.isValid(). The same ParsedJson can be reused for other documents.
+//
+// A temporary buffer is created when needed during processing
+// (a copy of the input string is made).
+WARN_UNUSED
+inline ParsedJson build_parsed_json(const std::string &s) {
+  return build_parsed_json(s.data(), s.length(), true);
 }
+
+
+// Parse a document found in in string s.
+// You need to preallocate ParsedJson with a capacity of len (e.g., pj.allocateCapacity(len)).
+// Return SUCCESS (an integer = 1) in case of a success. You can also check validity
+// by calling pj.isValid(). The same ParsedJson can be reused for other documents.
+WARN_UNUSED
+inline ParsedJson build_parsed_json(const padded_string &s) {
+  return build_parsed_json(s.data(), s.length(), false);
+}
+
+
 
 #endif

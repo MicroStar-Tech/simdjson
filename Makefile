@@ -9,18 +9,33 @@ COREDEPSINCLUDE = -Idependencies/rapidjson/include -Idependencies/sajson/include
 EXTRADEPSINCLUDE =  -Idependencies/jsoncppdist -Idependencies/json11 -Idependencies/fastjson/src -Idependencies/fastjson/include -Idependencies/gason/src -Idependencies/ujson4c/3rdparty -Idependencies/ujson4c/src
 CXXFLAGS =  -std=c++17  -march=native -Wall -Wextra -Wshadow -Iinclude  -Ibenchmark/linux
 CFLAGS = -march=native  -Idependencies/ujson4c/3rdparty -Idependencies/ujson4c/src
+
+# This is a convenience flag
+ifdef SANITIZEGOLD
+    SANITIZE = 1
+    LINKER = gold
+endif
+
+ifdef LINKER
+	CXXFLAGS += -fuse-ld=$(LINKER)
+	CFLAGS += -fuse-ld=$(LINKER)
+endif
+
+
+# SANITIZE *implies* DEBUG
 ifeq ($(SANITIZE),1)
-	CXXFLAGS += -g3 -O0  -fsanitize=address -fno-omit-frame-pointer -fsanitize=undefined
-	CFLAGS += -g3 -O0  -fsanitize=address -fno-omit-frame-pointer -fsanitize=undefined
+	CXXFLAGS += -g3 -O0  -fsanitize=address -fno-omit-frame-pointer -fsanitize=undefined 
+	CFLAGS += -g3 -O0  -fsanitize=address -fno-omit-frame-pointer -fsanitize=undefined 
 else
 ifeq ($(DEBUG),1)
         CXXFLAGS += -g3 -O0
         CFLAGS += -g3 -O0
 else
+# we opt for  -O3 for regular builds
 	CXXFLAGS += -O3
 	CFLAGS += -O3
-endif
-endif
+endif # ifeq ($(DEBUG),1)
+endif # ifeq ($(SANITIZE),1)
 
 MAINEXECUTABLES=parse minify json2json jsonstats statisticalmodel
 TESTEXECUTABLES=jsoncheck numberparsingcheck stringparsingcheck
@@ -56,44 +71,34 @@ benchmark:
 	bash ./scripts/parser.sh
 	bash ./scripts/parseandstat.sh
 
-test: jsoncheck numberparsingcheck stringparsingcheck
+test: jsoncheck numberparsingcheck stringparsingcheck basictests allparserscheckfile minify json2json
+	./basictests
 	./numberparsingcheck
 	./stringparsingcheck
 	./jsoncheck
 	./scripts/testjson2json.sh
+	./scripts/issue150.sh
 	@echo
 	@tput setaf 2
 	@echo "It looks like the code is good!"
 	@tput sgr0
 
-quiettest: jsoncheck numberparsingcheck stringparsingcheck
+quiettest: jsoncheck numberparsingcheck stringparsingcheck basictests allparserscheckfile minify json2json
+	./basictests
 	./numberparsingcheck
 	./stringparsingcheck
 	./jsoncheck
 	./scripts/testjson2json.sh
+	./scripts/issue150.sh
 
 amalgamate:
 	./amalgamation.sh
 
-$(SAJSON_INCLUDE):
+
+submodules: 
 	git submodule update --init --recursive
 
-$(RAPIDJSON_INCLUDE):
-	git submodule update --init --recursive
-
-$(JSON11_INCLUDE):
-	git submodule update --init --recursive
-
-$(FASTJSON_INCLUDE):
-	git submodule update --init --recursive
-
-$(GASON_INCLUDE):
-	git submodule update --init --recursive
-
-$(UJSON4C_INCLUDE):
-	git submodule update --init --recursive
-
-
+$(SAJSON_INCLUDE) $(RAPIDJSON_INCLUDE) $(JSON11_INCLUDE) $(FASTJSON_INCLUDE) $(GASON_INCLUDE) $(UJSON4C_INCLUDE) $(CJSON_INCLUDE) $(JSMN_INCLUDE) : submodules
 
 parse: benchmark/parse.cpp $(HEADERS) $(LIBFILES)
 	$(CXX) $(CXXFLAGS) -o parse $(LIBFILES) benchmark/parse.cpp $(LIBFLAGS)
@@ -114,6 +119,10 @@ parse_nostringparsing: benchmark/parse.cpp $(HEADERS) $(LIBFILES)
 
 jsoncheck:tests/jsoncheck.cpp $(HEADERS) $(LIBFILES)
 	$(CXX) $(CXXFLAGS) -o jsoncheck $(LIBFILES) tests/jsoncheck.cpp -I. $(LIBFLAGS)
+
+basictests:tests/basictests.cpp $(HEADERS) $(LIBFILES)
+	$(CXX) $(CXXFLAGS) -o basictests $(LIBFILES) tests/basictests.cpp -I. $(LIBFLAGS)
+
 
 numberparsingcheck:tests/numberparsingcheck.cpp $(HEADERS) $(LIBFILES)
 	$(CXX) $(CXXFLAGS) -o numberparsingcheck tests/numberparsingcheck.cpp  src/jsonioutil.cpp src/jsonparser.cpp src/simdjson.cpp src/stage1_find_marks.cpp  src/parsedjson.cpp       -I. $(LIBFLAGS) -DJSON_TEST_NUMBERS
@@ -138,13 +147,13 @@ jsonstats: tools/jsonstats.cpp $(HEADERS) $(LIBFILES)
 ujdecode.o: $(UJSON4C_INCLUDE)
 	$(CC) $(CFLAGS) -c dependencies/ujson4c/src/ujdecode.c
 
-parseandstatcompetition: benchmark/parseandstatcompetition.cpp $(HEADERS) $(LIBFILES)
+parseandstatcompetition: benchmark/parseandstatcompetition.cpp $(HEADERS) $(LIBFILES) $(LIBS)
 	$(CXX) $(CXXFLAGS)  -o parseandstatcompetition $(LIBFILES) benchmark/parseandstatcompetition.cpp -I. $(LIBFLAGS) $(COREDEPSINCLUDE)
 
-distinctuseridcompetition: benchmark/distinctuseridcompetition.cpp $(HEADERS) $(LIBFILES)
+distinctuseridcompetition: benchmark/distinctuseridcompetition.cpp $(HEADERS) $(LIBFILES) $(LIBS)
 	$(CXX) $(CXXFLAGS)  -o distinctuseridcompetition $(LIBFILES) benchmark/distinctuseridcompetition.cpp  -I. $(LIBFLAGS) $(COREDEPSINCLUDE)
 
-parsingcompetition: benchmark/parsingcompetition.cpp $(HEADERS) $(LIBFILES)
+parsingcompetition: benchmark/parsingcompetition.cpp $(HEADERS) $(LIBFILES) $(LIBS)
 	$(CXX) $(CXXFLAGS)  -o parsingcompetition $(LIBFILES) benchmark/parsingcompetition.cpp -I. $(LIBFLAGS) $(COREDEPSINCLUDE)
 
 allparsingcompetition: benchmark/parsingcompetition.cpp $(HEADERS) $(LIBFILES) $(EXTRAOBJECTS) $(LIBS)
@@ -154,6 +163,7 @@ allparsingcompetition: benchmark/parsingcompetition.cpp $(HEADERS) $(LIBFILES) $
 allparserscheckfile: tests/allparserscheckfile.cpp $(HEADERS) $(LIBFILES) $(EXTRAOBJECTS) $(LIBS)
 	$(CXX) $(CXXFLAGS) -o allparserscheckfile $(LIBFILES) tests/allparserscheckfile.cpp $(EXTRAOBJECTS) -I. $(LIBFLAGS) $(COREDEPSINCLUDE) $(EXTRADEPSINCLUDE)
 
+.PHONY: submodules clean cppcheck cleandist
 
 cppcheck:
 	cppcheck --enable=all src/*.cpp  benchmarks/*.cpp tests/*.cpp -Iinclude -I. -Ibenchmark/linux
