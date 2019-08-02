@@ -17,10 +17,16 @@ Description: Parsing gigabytes of JSON per second (shared object)
  se using commonly available SIMD instructions as much as possible while doing
  full validation (including character encoding).
  .
- It has a special requirement:
-  - A processor with AVX2 (i.e., Intel processors starting with the Haswell
-    microarchitecture released 2013, and processors from AMD starting with
-    the Ryzen)
+ It requires a processor with:
+  - AVX2 (i.e., Intel processors starting with the Haswell microarchitecture
+    released 2013 and AMD processors starting with the Zen microarchitecture
+    released 2017)
+  - or SSE 4.2 and CLMUL (i.e., Intel processors going back to Westmere
+    released in 2010 or AMD processors starting with the Jaguar used in the
+    PS4 and XBox One)
+  - or a 64-bit ARM processor (ARMv8-A): this covers a wide range of mobile
+    processors, including all Apple processors currently available for sale,
+    going back as far back as the iPhone 5s (2013).
  .
  This package ships the shared object.
 
@@ -34,9 +40,15 @@ Description: Parsing gigabytes of JSON per second (development)
  se using commonly available SIMD instructions as much as possible while doing
  full validation (including character encoding).
  .
- It has a special requirement:
-  - A processor with AVX2 (i.e., Intel processors starting with the Haswell
-    microarchitecture released 2013, and processors from AMD starting with
-    the Ryzen)
+ It requires a processor with:
+  - AVX2 (i.e., Intel processors starting with the Haswell microarchitecture
+    released 2013 and AMD processors starting with the Zen microarchitecture
+    released 2017)
+  - or SSE 4.2 and CLMUL (i.e., Intel processors going back to Westmere
+    released in 2010 or AMD processors starting with the Jaguar used in the
+    PS4 and XBox One)
+  - or a 64-bit ARM processor (ARMv8-A): this covers a wide range of mobile
+    processors, including all Apple processors currently available for sale,
+    going back as far back as the iPhone 5s (2013).
  .
  This package ships development files.
