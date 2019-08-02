@@ -6,11 +6,11 @@ Standards-Version: 4.4.0
 Vcs-Browser: https://salsa.debian.org/debian/simdjson
 Vcs-Git: https://salsa.debian.org/debian/simdjson.git
 Maintainer: Mo Zhou <cdluminate@gmail.com>
-Build-Depends: debhelper-compat (= 11), cmake,
+Build-Depends: cmake, debhelper-compat (= 11)
 
 Package: libsimdjson0
 Architecture: any-amd64 arm64
-Depends: ${misc:Depends}, ${shlibs:Depends},
+Depends: ${misc:Depends}, ${shlibs:Depends}
 Description: Parsing gigabytes of JSON per second (shared object)
  JSON documents are everywhere on the Internet. Servers spend a lot of time
  parsing these documents. simdjson aims to accelerate the parsing of JSON per
@@ -33,7 +33,7 @@ Description: Parsing gigabytes of JSON per second (shared object)
 Package: libsimdjson-dev
 Section: libdevel
 Architecture: any-amd64 arm64
-Depends: ${misc:Depends}, libsimdjson0 (= ${binary:Version}),
+Depends: libsimdjson0 (= ${binary:Version}), ${misc:Depends}
 Description: Parsing gigabytes of JSON per second (development)
  JSON documents are everywhere on the Internet. Servers spend a lot of time
  parsing these documents. simdjson aims to accelerate the parsing of JSON per
