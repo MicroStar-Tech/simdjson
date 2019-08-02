@@ -2,7 +2,7 @@ Source: simdjson
 Section: libs
 Homepage: https://github.com/lemire/simdjson
 Priority: optional
-Standards-Version: 4.3.0
+Standards-Version: 4.4.0
 Vcs-Browser: https://salsa.debian.org/debian/simdjson
 Vcs-Git: https://salsa.debian.org/debian/simdjson.git
 Maintainer: Mo Zhou <cdluminate@gmail.com>
