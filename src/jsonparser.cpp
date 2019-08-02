@@ -1,66 +1,68 @@
 #include "simdjson/jsonparser.h"
-#ifdef _MSC_VER
-#include <windows.h>
-#include <sysinfoapi.h>
-#else
-#include <unistd.h>
-#endif
+#include "simdjson/isadetection.h"
+#include "simdjson/portability.h"
 #include "simdjson/simdjson.h"
 
-// parse a document found in buf, need to preallocate ParsedJson.
-WARN_UNUSED
-int json_parse(const uint8_t *buf, size_t len, ParsedJson &pj, bool reallocifneeded) {
-  if (pj.bytecapacity < len) {
-    return simdjson::CAPACITY;
-  }
-  bool reallocated = false;
-  if(reallocifneeded) {
-#ifdef ALLOW_SAME_PAGE_BUFFER_OVERRUN
-	  // realloc is needed if the end of the memory crosses a page
-#ifdef _MSC_VER
-	  SYSTEM_INFO sysInfo; 
-	  GetSystemInfo(&sysInfo); 
-	  long pagesize = sysInfo.dwPageSize;
-#else
-    long pagesize = sysconf (_SC_PAGESIZE); 
-#endif
-  //////////////
-  // We want to check that buf + len - 1 and buf + len - 1 + SIMDJSON_PADDING
-  // are in the same page.
-  // That is, we want to check that  
-  // (buf + len - 1) / pagesize == (buf + len - 1 + SIMDJSON_PADDING) / pagesize
-  // That's true if (buf + len - 1) % pagesize + SIMDJSON_PADDING < pagesize.
-  ///////////
-	 if ( (reinterpret_cast<uintptr_t>(buf + len - 1) % pagesize ) + SIMDJSON_PADDING < static_cast<uintptr_t>(pagesize) ) {
-#else // SIMDJSON_SAFE_SAME_PAGE_READ_OVERRUN
-     if(true) { // if not SIMDJSON_SAFE_SAME_PAGE_READ_OVERRUN, we always reallocate
-#endif
-	   const uint8_t *tmpbuf  = buf;
-       buf = (uint8_t *) allocate_padded_buffer(len);
-       if(buf == NULL) return simdjson::MEMALLOC;
-       memcpy((void*)buf,tmpbuf,len);
-       reallocated = true;
-     }
-  }
-  // find_structural_bits returns a boolean, not an int, we invert its result to keep consistent with res == 0 meaning success
-  int res = !find_structural_bits(buf, len, pj);
-  if (!res) {
-    res = unified_machine(buf, len, pj);
-  }
-  if(reallocated) { aligned_free((void*)buf);}
-  return res;
+namespace simdjson {
+
+Architecture find_best_supported_implementation() {
+  constexpr uint32_t haswell_flags =
+      instruction_set::AVX2 | instruction_set::PCLMULQDQ |
+      instruction_set::BMI1 | instruction_set::BMI2;
+  constexpr uint32_t westmere_flags =
+      instruction_set::SSE42 | instruction_set::PCLMULQDQ;
+
+  uint32_t supports = detect_supported_architectures();
+  // Order from best to worst (within architecture)
+  if ((haswell_flags & supports) == haswell_flags)
+    return Architecture::HASWELL;
+  if ((westmere_flags & supports) == westmere_flags)
+    return Architecture::WESTMERE;
+  if (instruction_set::NEON)
+    return Architecture::ARM64;
+
+  return Architecture::NONE;
 }
 
+// Responsible to select the best json_parse implementation
+int json_parse_dispatch(const uint8_t *buf, size_t len, ParsedJson &pj,
+                        bool realloc_if_needed) {
+  Architecture best_implementation = find_best_supported_implementation();
+  // Selecting the best implementation
+  switch (best_implementation) {
+#ifdef IS_X86_64
+  case Architecture::HASWELL:
+    json_parse_ptr = &json_parse_implementation<Architecture::HASWELL>;
+    break;
+  case Architecture::WESTMERE:
+    json_parse_ptr = &json_parse_implementation<Architecture::WESTMERE>;
+    break;
+#endif
+#ifdef IS_ARM64
+  case Architecture::ARM64:
+    json_parse_ptr = &json_parse_implementation<Architecture::ARM64>;
+    break;
+#endif
+  default:
+    std::cerr << "The processor is not supported by simdjson." << std::endl;
+    return simdjson::UNEXPECTED_ERROR;
+  }
+
+  return json_parse_ptr(buf, len, pj, realloc_if_needed);
+}
+
+json_parse_functype *json_parse_ptr = &json_parse_dispatch;
+
 WARN_UNUSED
-ParsedJson build_parsed_json(const uint8_t *buf, size_t len, bool reallocifneeded) {
+ParsedJson build_parsed_json(const uint8_t *buf, size_t len,
+                             bool realloc_if_needed) {
   ParsedJson pj;
-  bool ok = pj.allocateCapacity(len);
-  if(ok) {
-    int res = json_parse(buf, len, pj, reallocifneeded);
-    ok = res == simdjson::SUCCESS;
-    assert(ok == pj.isValid());
+  bool ok = pj.allocate_capacity(len);
+  if (ok) {
+    json_parse(buf, len, pj, realloc_if_needed);
   } else {
     std::cerr << "failure during memory allocation " << std::endl;
   }
   return pj;
 }
+} // namespace simdjson
