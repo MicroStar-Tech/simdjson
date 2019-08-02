@@ -1,3 +1,10 @@
+simdjson (0.2.0-1) UNRELEASED; urgency=medium
+
+  * Add symbols file for x32 architecture.
+  * New upstream version 0.2.0
+
+ -- Mo Zhou <cdluminate@gmail.com>  Fri, 02 Aug 2019 00:31:10 +0000
+
 simdjson (0.1.2-2) unstable; urgency=medium
 
   * Don't fail the build on SIGILL.
