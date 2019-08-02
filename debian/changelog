@@ -1,9 +1,16 @@
-simdjson (0.2.0-1) UNRELEASED; urgency=medium
+simdjson (0.2.0-1) unstable; urgency=medium
 
-  * Add symbols file for x32 architecture.
   * New upstream version 0.2.0
+  * Append arm64 to supported Architectures.
+    + Update the CPU requirement in long description.
+  * Refresh symbols list.
+    + Add symbols file for x32 and arm64 architecture.
+    + Mark symbols that GCC-9 doesn't produce as optional.
+    + Track symbols for arm64 Architecture.
+  * Bump Standards-Version to 4.4.0 (no change).
+  * Apply wrap-and-sort.
 
- -- Mo Zhou <cdluminate@gmail.com>  Fri, 02 Aug 2019 00:31:10 +0000
+ -- Mo Zhou <cdluminate@gmail.com>  Fri, 02 Aug 2019 01:11:15 +0000
 
 simdjson (0.1.2-2) unstable; urgency=medium
 
