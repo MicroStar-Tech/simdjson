@@ -9,7 +9,7 @@ Maintainer: Mo Zhou <cdluminate@gmail.com>
 Build-Depends: debhelper-compat (= 11), cmake,
 
 Package: libsimdjson0
-Architecture: any-amd64
+Architecture: any-amd64 arm64
 Depends: ${misc:Depends}, ${shlibs:Depends},
 Description: Parsing gigabytes of JSON per second (shared object)
  JSON documents are everywhere on the Internet. Servers spend a lot of time
@@ -32,7 +32,7 @@ Description: Parsing gigabytes of JSON per second (shared object)
 
 Package: libsimdjson-dev
 Section: libdevel
-Architecture: any-amd64
+Architecture: any-amd64 arm64
 Depends: ${misc:Depends}, libsimdjson0 (= ${binary:Version}),
 Description: Parsing gigabytes of JSON per second (development)
  JSON documents are everywhere on the Internet. Servers spend a lot of time
