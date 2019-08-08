@@ -1,3 +1,10 @@
+simdjson (0.2.1-1) UNRELEASED; urgency=medium
+
+  * New upstream version 0.2.1
+  * Refresh symbols list.
+
+ -- Mo Zhou <cdluminate@gmail.com>  Thu, 08 Aug 2019 10:47:15 +0000
+
 simdjson (0.2.0-1) unstable; urgency=medium
 
   * New upstream version 0.2.0
