@@ -24,6 +24,8 @@ libsimdjson.so.0 libsimdjson0 #MINVER#
  _ZN8simdjson10ParsedJsonD1Ev@Base 0.2.0
  _ZN8simdjson10ParsedJsonD2Ev@Base 0.2.0
  _ZN8simdjson10get_corpusERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE@Base 0.2.0
+ _ZN8simdjson10json_parseEPKcmRNS_10ParsedJsonEb@Base 0.2.1
+ _ZN8simdjson10json_parseEPKhmRNS_10ParsedJsonEb@Base 0.2.1
  _ZN8simdjson11json_minifyEPKhmPh@Base 0.2.0
  _ZN8simdjson13error_messageB5cxx11Ei@Base 0.2.0
  _ZN8simdjson14json_parse_ptrE@Base 0.2.0
