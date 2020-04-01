@@ -1,4 +1,4 @@
-libsimdjson.so.0 libsimdjson0 #MINVER#
+libsimdjson.so.1 libsimdjson1 #MINVER#
  _ZGVN8simdjson21active_implementationE@Base 0.3.0
  _ZGVN8simdjson25available_implementationsE@Base 0.3.0
  _ZGVN8simdjson8internal11error_codesE@Base 0.3.0

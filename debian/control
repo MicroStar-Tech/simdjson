@@ -8,7 +8,7 @@ Vcs-Git: https://salsa.debian.org/debian/simdjson.git
 Maintainer: Mo Zhou <cdluminate@gmail.com>
 Build-Depends: cmake, debhelper-compat (= 11)
 
-Package: libsimdjson0
+Package: libsimdjson1
 Architecture: any-amd64 arm64
 Depends: ${misc:Depends}, ${shlibs:Depends}
 Description: Parsing gigabytes of JSON per second (shared object)
@@ -31,7 +31,7 @@ Description: Parsing gigabytes of JSON per second (shared object)
 Package: libsimdjson-dev
 Section: libdevel
 Architecture: any-amd64 arm64
-Depends: libsimdjson0 (= ${binary:Version}), ${misc:Depends}
+Depends: libsimdjson1 (= ${binary:Version}), ${misc:Depends}
 Description: Parsing gigabytes of JSON per second (development)
  JSON is everywhere on the Internet. Servers spend a *lot* of time parsing it.
  We need a fresh approach. The simdjson library uses commonly available SIMD

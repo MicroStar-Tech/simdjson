@@ -1,4 +1,4 @@
-libsimdjson.so.0 libsimdjson0 #MINVER#
+libsimdjson.so.1 libsimdjson1 #MINVER#
  _Z10get_corpusRKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE@Base 0.1.2
  _Z10json_parsePKhjR10ParsedJsonb@Base 0.1.2
  _Z10jsonminifyPKhjPh@Base 0.1.2

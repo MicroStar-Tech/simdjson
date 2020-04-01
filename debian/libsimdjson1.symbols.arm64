@@ -1,4 +1,4 @@
-libsimdjson.so.0 libsimdjson0 #MINVER#
+libsimdjson.so.1 libsimdjson1 #MINVER#
  _ZN8simdjson10ParsedJson10deallocateEv@Base 0.2.0
  _ZN8simdjson10ParsedJson10print_jsonERSo@Base 0.2.0
  _ZN8simdjson10ParsedJson11InvalidJSOND0Ev@Base 0.2.0
