@@ -1,8 +1,18 @@
 simdjson (0.3.0-1) UNRELEASED; urgency=medium
 
   * New upstream version 0.3.0
+  * Refresh symbols control file.
+  * Update package descriptions
+  * Cherry-pick soversion-bumping patch from upstream PR.
+  * Bump SOVERSION to 1 and reflect changes in control files.
+  * Bump Standards-Version to 4.5.0 (no change).
+  * Update my mail address in control and copyright.
+  * Bump debhelper compat level to 12.
+  * Install the cmake files to the -dev package.
+  * Update copyright information.
+  * Specify Rules-Requires-Root: no.
 
- -- Mo Zhou <lumin@debian.org>  Wed, 01 Apr 2020 10:10:44 +0800
+ -- Mo Zhou <lumin@debian.org>  Wed, 01 Apr 2020 18:46:51 +0800
 
 simdjson (0.2.1-1) unstable; urgency=medium
 
