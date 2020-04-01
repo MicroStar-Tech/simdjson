@@ -15,22 +15,76 @@ else()
 endif()
 
 MESSAGE( STATUS "SIMDJSON_LIB_TYPE: " ${SIMDJSON_LIB_TYPE})
-set(SIMDJSON_SRC
-    jsonioutil.cpp
-    jsonminifier.cpp
-    jsonparser.cpp
-    stage1_find_marks.cpp
-    stage2_build_tape.cpp
-    parsedjson.cpp
-    parsedjsoniterator.cpp
-    simdjson.cpp
-    )
 
-add_library(${SIMDJSON_LIB_NAME} ${SIMDJSON_LIB_TYPE} ${SIMDJSON_SRC})
+# Bring in include files
+include(../include/CMakeLists.txt)
+
+set(SIMDJSON_SRC_DIR $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>)
+
+set(SIMDJSON_SRC
+  simdjson.cpp
+)
+
+# Load headers and sources
+set(SIMDJSON_SRC_HEADERS
+  implementation.cpp
+  isadetection.h
+  simdprune_tables.h
+  stage1_find_marks.cpp
+  stage2_build_tape.cpp
+  arm64/bitmanipulation.h
+  arm64/bitmask.h
+  arm64/implementation.h
+  arm64/intrinsics.h
+  arm64/numberparsing.h
+  arm64/simd.h
+  arm64/stage1_find_marks.h
+  arm64/stage2_build_tape.h
+  arm64/stringparsing.h
+  fallback/implementation.h
+  fallback/stage1_find_marks.h
+  fallback/stage2_build_tape.h
+  generic/atomparsing.h
+  generic/json_scanner.h
+  generic/json_string_scanner.h
+  generic/json_structural_indexer.h
+  generic/numberparsing.h
+  generic/stage2_build_tape.h
+  generic/stage2_streaming_build_tape.h
+  generic/stringparsing.h
+  generic/utf8_fastvalidate_algorithm.h
+  generic/utf8_lookup_algorithm.h
+  generic/utf8_lookup2_algorithm.h
+  generic/utf8_range_algorithm.h
+  generic/utf8_zwegner_algorithm.h
+  haswell/bitmanipulation.h
+  haswell/bitmask.h
+  haswell/implementation.h
+  haswell/intrinsics.h
+  haswell/numberparsing.h
+  haswell/simd.h
+  haswell/stage1_find_marks.h
+  haswell/stage2_build_tape.h
+  haswell/stringparsing.h
+  document_parser_callbacks.h
+  westmere/bitmanipulation.h
+  westmere/bitmask.h
+  westmere/implementation.h
+  westmere/intrinsics.h
+  westmere/numberparsing.h
+  westmere/simd.h
+  westmere/stage1_find_marks.h
+  westmere/stage2_build_tape.h
+  westmere/stringparsing.h
+)
+set_source_files_properties(${SIMDJSON_SRC_HEADERS} PROPERTIES HEADER_FILE_ONLY TRUE)
+
+add_library(${SIMDJSON_LIB_NAME} ${SIMDJSON_LIB_TYPE} ${SIMDJSON_SRC} ${SIMDJSON_INCLUDE} ${SIMDJSON_SRC_HEADERS})
 
 target_include_directories(${SIMDJSON_LIB_NAME}
   PUBLIC
-  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+  $<BUILD_INTERFACE:${SIMDJSON_SRC_DIR}>
+  $<BUILD_INTERFACE:${SIMDJSON_INCLUDE_DIR}>
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 
@@ -65,3 +119,9 @@ if(MSVC AND (SIMDJSON_LIB_TYPE STREQUAL "SHARED"))
  set_target_properties(${SIMDJSON_LIB_NAME}
     PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS 1)
 endif()
+
+if(SIMDJSON_ENABLE_THREADS)
+  find_package(Threads REQUIRED)
+  target_link_libraries( ${SIMDJSON_LIB_NAME} Threads::Threads)
+endif()
+

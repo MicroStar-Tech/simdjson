@@ -1,23 +1,53 @@
 #ifndef SIMDJSON_COMMON_DEFS_H
 #define SIMDJSON_COMMON_DEFS_H
 
+#include <cassert>
 #include "simdjson/portability.h"
 
-#include <cassert>
+namespace simdjson {
 
-// we support documents up to 4GB
-#define SIMDJSON_MAXSIZE_BYTES 0xFFFFFFFF
-
-// the input buf should be readable up to buf + SIMDJSON_PADDING
-#ifdef __AVX2__
-#define SIMDJSON_PADDING sizeof(__m256i)
+#ifndef SIMDJSON_EXCEPTIONS
+#if __cpp_exceptions
+#define SIMDJSON_EXCEPTIONS 1
 #else
-// this is a stopgap; there should be a better description of the
-// main loop and its behavior that abstracts over this
-#define SIMDJSON_PADDING 32
+#define SIMDJSON_EXCEPTIONS 0
+#endif
 #endif
 
-#ifndef _MSC_VER
+/** The maximum document size supported by simdjson. */
+constexpr size_t SIMDJSON_MAXSIZE_BYTES = 0xFFFFFFFF;
+
+/**
+ * The amount of padding needed in a buffer to parse JSON.
+ *
+ * the input buf should be readable up to buf + SIMDJSON_PADDING
+ * this is a stopgap; there should be a better description of the
+ * main loop and its behavior that abstracts over this
+ * See https://github.com/lemire/simdjson/issues/174
+ */
+constexpr size_t SIMDJSON_PADDING = 32;
+
+/**
+ * By default, simdjson supports this many nested objects and arrays.
+ *
+ * This is the default for parser::max_depth().
+ */
+constexpr size_t DEFAULT_MAX_DEPTH = 1024;
+
+} // namespace simdjson
+
+#if defined(__GNUC__)
+// Marks a block with a name so that MCA analysis can see it.
+#define BEGIN_DEBUG_BLOCK(name) __asm volatile("# LLVM-MCA-BEGIN " #name);
+#define END_DEBUG_BLOCK(name) __asm volatile("# LLVM-MCA-END " #name);
+#define DEBUG_BLOCK(name, block) BEGIN_DEBUG_BLOCK(name); block; END_DEBUG_BLOCK(name);
+#else
+#define BEGIN_DEBUG_BLOCK(name)
+#define END_DEBUG_BLOCK(name)
+#define DEBUG_BLOCK(name, block)
+#endif
+
+#if !defined(_MSC_VER) && !defined(SIMDJSON_NO_COMPUTED_GOTO)
 // Implemented using Labels as Values which works in GCC and CLANG (and maybe
 // also in Intel's compiler), but won't work in MSVC.
 #define SIMDJSON_USE_COMPUTED_GOTO
@@ -43,38 +73,14 @@
 #define unlikely(x) x
 #endif
 
-// For Visual Studio compilers, same-page buffer overrun is not fine.
-#define ALLOW_SAME_PAGE_BUFFER_OVERRUN false
+#define SIMDJSON_PUSH_DISABLE_WARNINGS __pragma(warning( push ))
+#define SIMDJSON_PUSH_DISABLE_ALL_WARNINGS __pragma(warning( push, 0 ))
+#define SIMDJSON_DISABLE_VS_WARNING(WARNING_NUMBER) __pragma(warning( disable : WARNING_NUMBER ))
+#define SIMDJSON_DISABLE_DEPRECATED_WARNING SIMDJSON_DISABLE_VS_WARNING(4996)
+#define SIMDJSON_POP_DISABLE_WARNINGS __pragma(warning( pop ))
 
-#else
+#else // MSC_VER
 
-// For non-Visual Studio compilers, we may assume that same-page buffer overrun
-// is fine. However, it will make it difficult to be "valgrind clean".
-//#ifndef ALLOW_SAME_PAGE_BUFFER_OVERRUN
-//#define ALLOW_SAME_PAGE_BUFFER_OVERRUN true
-//#else
-#define ALLOW_SAME_PAGE_BUFFER_OVERRUN false
-//#endif
-
-// The following is likely unnecessarily complex.
-#ifdef __SANITIZE_ADDRESS__
-// we have GCC, stuck with https://gcc.gnu.org/bugzilla/show_bug.cgi?id=67368
-#define ALLOW_SAME_PAGE_BUFFER_OVERRUN false
-#elif defined(__has_feature)
-// we have CLANG?
-// todo: if we're setting ALLOW_SAME_PAGE_BUFFER_OVERRUN to false, why do we
-// have a non-empty qualifier?
-#if (__has_feature(address_sanitizer))
-#define ALLOW_SAME_PAGE_BUFFER_OVERRUN_QUALIFIER                               \
-  __attribute__((no_sanitize("address")))
-#endif
-#endif
-
-#if defined(__has_feature)
-#if (__has_feature(memory_sanitizer))
-#define LENIENT_MEM_SANITIZER __attribute__((no_sanitize("memory")))
-#endif
-#endif
 
 #define really_inline inline __attribute__((always_inline, unused))
 #define never_inline inline __attribute__((noinline, unused))
@@ -89,14 +95,19 @@
 #define unlikely(x) __builtin_expect(!!(x), 0)
 #endif
 
-#endif // MSC_VER
+#define SIMDJSON_PUSH_DISABLE_WARNINGS _Pragma("GCC diagnostic push")
+// gcc doesn't seem to disable all warnings with all and extra, add warnings here as necessary
+#define SIMDJSON_PUSH_DISABLE_ALL_WARNINGS SIMDJSON_PUSH_DISABLE_WARNINGS \
+  SIMDJSON_DISABLE_GCC_WARNING(-Wall) \
+  SIMDJSON_DISABLE_GCC_WARNING(-Wextra) \
+  SIMDJSON_DISABLE_GCC_WARNING(-Wshadow) \
+  SIMDJSON_DISABLE_GCC_WARNING(-Wunused-parameter) \
+  SIMDJSON_DISABLE_GCC_WARNING(-Wimplicit-fallthrough)
+#define SIMDJSON_PRAGMA(P) _Pragma(#P)
+#define SIMDJSON_DISABLE_GCC_WARNING(WARNING) SIMDJSON_PRAGMA(GCC diagnostic ignored #WARNING)
+#define SIMDJSON_DISABLE_DEPRECATED_WARNING SIMDJSON_DISABLE_GCC_WARNING(-Wdeprecated-declarations)
+#define SIMDJSON_POP_DISABLE_WARNINGS _Pragma("GCC diagnostic pop")
 
-// if it does not apply, make it an empty macro
-#ifndef ALLOW_SAME_PAGE_BUFFER_OVERRUN_QUALIFIER
-#define ALLOW_SAME_PAGE_BUFFER_OVERRUN_QUALIFIER
-#endif
-#ifndef LENIENT_MEM_SANITIZER
-#define LENIENT_MEM_SANITIZER
-#endif
+#endif // MSC_VER
 
 #endif // SIMDJSON_COMMON_DEFS_H

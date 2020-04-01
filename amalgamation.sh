@@ -11,78 +11,88 @@ echo "See https://www.sqlite.org/amalgamation.html and https://en.wikipedia.org/
 AMAL_H="simdjson.h"
 AMAL_C="simdjson.cpp"
 
-# order does not matter
+SRCPATH="$SCRIPTPATH/src"
+INCLUDEPATH="$SCRIPTPATH/include"
+
+# this list excludes the "src/generic headers"
 ALLCFILES="
-$SCRIPTPATH/src/simdjson.cpp
-$SCRIPTPATH/src/jsonioutil.cpp
-$SCRIPTPATH/src/jsonminifier.cpp
-$SCRIPTPATH/src/jsonparser.cpp
-$SCRIPTPATH/src/stage1_find_marks.cpp
-$SCRIPTPATH/src/stage2_build_tape.cpp
-$SCRIPTPATH/src/parsedjson.cpp
-$SCRIPTPATH/src/parsedjsoniterator.cpp
+simdjson.cpp
 "
 
 # order matters
 ALLCHEADERS="
-$SCRIPTPATH/include/simdjson/simdjson_version.h
-$SCRIPTPATH/include/simdjson/portability.h
-$SCRIPTPATH/include/simdjson/isadetection.h
-$SCRIPTPATH/include/simdjson/simdjson.h
-$SCRIPTPATH/include/simdjson/common_defs.h
-$SCRIPTPATH/include/simdjson/padded_string.h
-$SCRIPTPATH/include/simdjson/jsoncharutils.h
-$SCRIPTPATH/include/simdjson/jsonformatutils.h
-$SCRIPTPATH/include/simdjson/jsonioutil.h
-$SCRIPTPATH/include/simdjson/simdprune_tables.h
-$SCRIPTPATH/include/simdjson/simdutf8check_haswell.h
-$SCRIPTPATH/include/simdjson/simdutf8check_westmere.h
-$SCRIPTPATH/include/simdjson/simdutf8check_arm64.h
-$SCRIPTPATH/include/simdjson/jsonminifier.h
-$SCRIPTPATH/include/simdjson/parsedjson.h
-$SCRIPTPATH/include/simdjson/stage1_find_marks.h
-$SCRIPTPATH/include/simdjson/stage1_find_marks_flatten.h
-$SCRIPTPATH/include/simdjson/stage1_find_marks_flatten_haswell.h
-$SCRIPTPATH/include/simdjson/stage1_find_marks_macros.h
-$SCRIPTPATH/include/simdjson/stage1_find_marks_westmere.h
-$SCRIPTPATH/include/simdjson/stage1_find_marks_haswell.h
-$SCRIPTPATH/include/simdjson/stage1_find_marks_arm64.h
-$SCRIPTPATH/include/simdjson/stringparsing.h
-$SCRIPTPATH/include/simdjson/stringparsing_macros.h
-$SCRIPTPATH/include/simdjson/stringparsing_westmere.h
-$SCRIPTPATH/include/simdjson/stringparsing_haswell.h
-$SCRIPTPATH/include/simdjson/stringparsing_arm64.h
-$SCRIPTPATH/include/simdjson/numberparsing.h
-$SCRIPTPATH/include/simdjson/stage2_build_tape.h
-$SCRIPTPATH/include/simdjson/jsonparser.h
+simdjson.h
 "
 
-for i in ${ALLCHEADERS} ${ALLCFILES}; do
-    test -e $i && continue
-    echo "FATAL: source file [$i] not found."
+found_includes=()
+
+for file in ${ALLCFILES}; do
+    test -e "$SRCPATH/$file" && continue
+    echo "FATAL: source file [$SRCPATH/$file] not found."
     exit 127
 done
 
+for file in ${ALLCHEADERS}; do
+    test -e "$INCLUDEPATH/$file" && continue
+    echo "FATAL: source file [$INCLUDEPATH/$file] not found."
+    exit 127
+done
 
-function stripinc()
+function doinclude()
 {
-    sed -e '/# *include *"/d' -e '/# *include *<simdjson\//d'
+    file=$1
+    line="${@:2}"
+    if [ -f $INCLUDEPATH/$file ]; then
+        if [[ ! " ${found_includes[@]} " =~ " ${file} " ]]; then
+            found_includes+=("$file")
+            dofile $INCLUDEPATH/$file
+        fi;
+    elif [ -f $SRCPATH/$file ]; then
+        # generic includes are included multiple times
+        if [[ "${file}" == *'generic/'*'.h' ]]; then
+            dofile $SRCPATH/$file
+        elif [[ ! " ${found_includes[@]} " =~ " ${file} " ]]; then
+            found_includes+=("$file")
+            dofile $SRCPATH/$file
+        else
+            echo "/* $file already included: $line */"
+        fi
+    else
+      # If we don't recognize it, just emit the #include
+      echo "$line"
+    fi
 }
+
 function dofile()
 {
+    # Last lines are always ignored. Files should end by an empty lines.
     RELFILE=${1#"$SCRIPTPATH/"}
     echo "/* begin file $RELFILE */"
     # echo "#line 8 \"$1\"" ## redefining the line/file is not nearly as useful as it sounds for debugging. It breaks IDEs.
-    stripinc < $1
+    while IFS= read -r line || [ -n "$line" ];
+    do
+        if [[ "${line}" == '#include "'*'"'* ]]; then
+            file=$(echo $line| cut -d'"' -f 2)
+
+            if [[ "${file}" == '../'* ]]; then
+                file=$(echo $file| cut -d'/' -f 2-)
+            fi;
+
+            # we explicitly include simdjson headers, one time each (unless they are generic, in which case multiple times is fine)
+            doinclude $file $line
+        else
+            # Otherwise we simply copy the line
+            echo "$line"
+        fi
+    done < "$1"
     echo "/* end file $RELFILE */"
 }
-
 timestamp=$(date)
 echo "Creating ${AMAL_H}..."
 echo "/* auto-generated on ${timestamp}. Do not edit! */" > "${AMAL_H}"
 {
     for h in ${ALLCHEADERS}; do
-        dofile $h
+        doinclude $h "ERROR $h not found"
     done
 } >> "${AMAL_H}"
 
@@ -99,11 +109,10 @@ echo "/* auto-generated on ${timestamp}. Do not edit! */" > "${AMAL_C}"
     echo "#endif"
     echo ""
 
-    for h in ${ALLCFILES}; do
-        dofile $h
+    for file in ${ALLCFILES}; do
+        dofile "$SRCPATH/$file"
     done
 } >> "${AMAL_C}"
-
 
 
 DEMOCPP="amalgamation_demo.cpp"
@@ -115,15 +124,33 @@ cat <<< '
 #include "simdjson.cpp"
 int main(int argc, char *argv[]) {
   if(argc < 2) {
-    std::cerr << "Please specify a filename " << std::endl;
+    std::cerr << "Please specify at least one file name. " << std::endl;
   }
   const char * filename = argv[1];
-  simdjson::padded_string p = simdjson::get_corpus(filename);
-  simdjson::ParsedJson pj = simdjson::build_parsed_json(p); // do the parsing
-  if( ! pj.is_valid() ) {
-    std::cout << "not valid" << std::endl;
+  simdjson::dom::parser parser;
+  auto [doc, error] = parser.load(filename); // do the parsing
+  if (error) {
+    std::cout << "parse failed" << std::endl;
+    std::cout << "error code: " << error << std::endl;
+    std::cout << error << std::endl;
   } else {
-    std::cout << "valid" << std::endl;
+    std::cout << "parse valid" << std::endl;
+  }
+  if(argc == 2) {
+    return EXIT_SUCCESS;
+  }
+
+  // parse_many
+  const char * filename2 = argv[2];
+  for (auto result : parser.load_many(filename2)) {
+    error = result.error();
+  }
+  if (error) {
+    std::cout << "parse_many failed" << std::endl;
+    std::cout << "error code: " << error << std::endl;
+    std::cout << error << std::endl;
+  } else {
+    std::cout << "parse_many valid" << std::endl;
   }
   return EXIT_SUCCESS;
 }
@@ -140,16 +167,16 @@ echo "Giving final instructions:"
 CPPBIN=${DEMOCPP%%.*}
 
 echo "Try :"
-echo "c++ -O3 -std=c++17 -o ${CPPBIN} ${DEMOCPP}  && ./${CPPBIN} ../jsonexamples/twitter.json "
+echo "c++ -O3 -std=c++17 -pthread -o ${CPPBIN} ${DEMOCPP}  && ./${CPPBIN} ../jsonexamples/twitter.json ../jsonexamples/amazon_cellphones.ndjson"
 
 SINGLEHDR=$SCRIPTPATH/singleheader
 echo "Copying files to $SCRIPTPATH/singleheader "
 mkdir -p $SINGLEHDR
-echo "c++ -O3 -std=c++17 -o ${CPPBIN} ${DEMOCPP}  && ./${CPPBIN} ../jsonexamples/twitter.json " > $SINGLEHDR/README.md
+echo "c++ -O3 -std=c++17 -pthread -o ${CPPBIN} ${DEMOCPP}  && ./${CPPBIN} ../jsonexamples/twitter.json ../jsonexamples/amazon_cellphones.ndjson" > $SINGLEHDR/README.md
 cp ${AMAL_C} ${AMAL_H}  ${DEMOCPP} $SINGLEHDR
 ls $SINGLEHDR
 
-cd $SINGLEHDR && c++ -O3 -std=c++17 -o ${CPPBIN} ${DEMOCPP}  && ./${CPPBIN} ../jsonexamples/twitter.json
+cd $SINGLEHDR && c++ -O3 -std=c++17 -pthread -o ${CPPBIN} ${DEMOCPP}  && ./${CPPBIN} ../jsonexamples/twitter.json ../jsonexamples/amazon_cellphones.ndjson
 
 lowercase(){
     echo "$1" | tr 'A-Z' 'a-z'
