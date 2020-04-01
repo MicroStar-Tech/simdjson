@@ -12,21 +12,19 @@ Package: libsimdjson0
 Architecture: any-amd64 arm64
 Depends: ${misc:Depends}, ${shlibs:Depends}
 Description: Parsing gigabytes of JSON per second (shared object)
- JSON documents are everywhere on the Internet. Servers spend a lot of time
- parsing these documents. simdjson aims to accelerate the parsing of JSON per
- se using commonly available SIMD instructions as much as possible while doing
- full validation (including character encoding).
+ JSON is everywhere on the Internet. Servers spend a *lot* of time parsing it.
+ We need a fresh approach. The simdjson library uses commonly available SIMD
+ instructions and microparallel algorithms to parse JSON 2.5x faster than
+ anything else out there.
  .
- It requires a processor with:
-  - AVX2 (i.e., Intel processors starting with the Haswell microarchitecture
-    released 2013 and AMD processors starting with the Zen microarchitecture
-    released 2017)
-  - or SSE 4.2 and CLMUL (i.e., Intel processors going back to Westmere
-    released in 2010 or AMD processors starting with the Jaguar used in the
-    PS4 and XBox One)
-  - or a 64-bit ARM processor (ARMv8-A): this covers a wide range of mobile
-    processors, including all Apple processors currently available for sale,
-    going back as far back as the iPhone 5s (2013).
+ Fast: Over 2.5x faster than other production-grade JSON parsers.
+ Easy: First-class, easy to use API.
+ Strict: Full JSON and UTF-8 validation, lossless parsing.
+         Performance with no compromises.
+ Automatic: Selects a CPU-tailored parser at runtime.
+            No configuration needed.
+ Reliable: From memory allocation to error handling,
+           simdjson's design avoids surprises.
  .
  This package ships the shared object.
 
@@ -35,20 +33,18 @@ Section: libdevel
 Architecture: any-amd64 arm64
 Depends: libsimdjson0 (= ${binary:Version}), ${misc:Depends}
 Description: Parsing gigabytes of JSON per second (development)
- JSON documents are everywhere on the Internet. Servers spend a lot of time
- parsing these documents. simdjson aims to accelerate the parsing of JSON per
- se using commonly available SIMD instructions as much as possible while doing
- full validation (including character encoding).
+ JSON is everywhere on the Internet. Servers spend a *lot* of time parsing it.
+ We need a fresh approach. The simdjson library uses commonly available SIMD
+ instructions and microparallel algorithms to parse JSON 2.5x faster than
+ anything else out there.
  .
- It requires a processor with:
-  - AVX2 (i.e., Intel processors starting with the Haswell microarchitecture
-    released 2013 and AMD processors starting with the Zen microarchitecture
-    released 2017)
-  - or SSE 4.2 and CLMUL (i.e., Intel processors going back to Westmere
-    released in 2010 or AMD processors starting with the Jaguar used in the
-    PS4 and XBox One)
-  - or a 64-bit ARM processor (ARMv8-A): this covers a wide range of mobile
-    processors, including all Apple processors currently available for sale,
-    going back as far back as the iPhone 5s (2013).
+ Fast: Over 2.5x faster than other production-grade JSON parsers.
+ Easy: First-class, easy to use API.
+ Strict: Full JSON and UTF-8 validation, lossless parsing.
+         Performance with no compromises.
+ Automatic: Selects a CPU-tailored parser at runtime.
+            No configuration needed.
+ Reliable: From memory allocation to error handling,
+           simdjson's design avoids surprises.
  .
  This package ships development files.
