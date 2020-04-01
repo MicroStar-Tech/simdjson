@@ -13,9 +13,9 @@ Architecture: any-amd64 arm64
 Depends: ${misc:Depends}, ${shlibs:Depends}
 Description: Parsing gigabytes of JSON per second (shared object)
  JSON is everywhere on the Internet. Servers spend a *lot* of time parsing it.
- We need a fresh approach. The simdjson library uses commonly available SIMD
- instructions and microparallel algorithms to parse JSON 2.5x faster than
- anything else out there.
+ The simdjson library uses commonly available SIMD instructions and
+ microparallel algorithms to parse JSON 2.5x faster than anything else out
+ there.
  .
  Fast: Over 2.5x faster than other production-grade JSON parsers.
  Easy: First-class, easy to use API.
@@ -34,9 +34,9 @@ Architecture: any-amd64 arm64
 Depends: libsimdjson1 (= ${binary:Version}), ${misc:Depends}
 Description: Parsing gigabytes of JSON per second (development)
  JSON is everywhere on the Internet. Servers spend a *lot* of time parsing it.
- We need a fresh approach. The simdjson library uses commonly available SIMD
- instructions and microparallel algorithms to parse JSON 2.5x faster than
- anything else out there.
+ The simdjson library uses commonly available SIMD instructions and
+ microparallel algorithms to parse JSON 2.5x faster than anything else out
+ there.
  .
  Fast: Over 2.5x faster than other production-grade JSON parsers.
  Easy: First-class, easy to use API.
