@@ -6,7 +6,7 @@ Standards-Version: 4.5.0
 Vcs-Browser: https://salsa.debian.org/debian/simdjson
 Vcs-Git: https://salsa.debian.org/debian/simdjson.git
 Maintainer: Mo Zhou <lumin@debian.org>
-Build-Depends: cmake, debhelper-compat (= 11)
+Build-Depends: cmake, debhelper-compat (= 12)
 
 Package: libsimdjson1
 Architecture: any-amd64 arm64
