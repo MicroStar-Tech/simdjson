@@ -1,4 +1,4 @@
-simdjson (0.3.0-1) UNRELEASED; urgency=medium
+simdjson (0.3.0-1) unstable; urgency=medium
 
   * New upstream version 0.3.0
   * Refresh symbols control file.
@@ -11,8 +11,9 @@ simdjson (0.3.0-1) UNRELEASED; urgency=medium
   * Install the cmake files to the -dev package.
   * Update copyright information.
   * Specify Rules-Requires-Root: no.
+  * Refresh symbols control file for arm64.
 
- -- Mo Zhou <lumin@debian.org>  Wed, 01 Apr 2020 18:46:51 +0800
+ -- Mo Zhou <lumin@debian.org>  Wed, 01 Apr 2020 19:20:59 +0800
 
 simdjson (0.2.1-1) unstable; urgency=medium
 
