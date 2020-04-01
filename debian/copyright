@@ -2,8 +2,8 @@ Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Source: https://github.com/lemire/simdjson
 
 Files: *
-Copyright: Daniel Lemire
-           Geoff Langdale
+Copyright: 2019-2020 Daniel Lemire
+           2019-2020 Geoff Langdale
 License: Apache-2.0
 
 Files: ./dependencies/jsoncppdist/json/json-forwards.h
@@ -22,7 +22,7 @@ Comment:
  The code of the alphasort(...) method and of all the other minor modifications is in the public domain.
 
 Files: debian/*
-Copyright: 2019, Mo Zhou <cdluminate@gmail.com>
+Copyright: 2019-2020, Mo Zhou <lumin@debian.org>
 License: Apache-2.0
 
 License: Expat
