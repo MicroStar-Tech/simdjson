@@ -1,8 +1,9 @@
-simdjson (0.3.1-1) UNRELEASED; urgency=medium
+simdjson (0.3.1-1) experimental; urgency=medium
 
   * New upstream version 0.3.1
+  * Remove the merged patches.
 
- -- Mo Zhou <lumin@debian.org>  Tue, 14 Apr 2020 21:10:05 +0800
+ -- Mo Zhou <lumin@debian.org>  Tue, 14 Apr 2020 21:15:26 +0800
 
 simdjson (0.3.0-1) unstable; urgency=medium
 
