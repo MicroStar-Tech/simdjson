@@ -1,11 +1,11 @@
 #include <cstring>
 #ifndef _MSC_VER
 #include <dirent.h>
-#include <unistd.h>
 #else
 // Microsoft can't be bothered to provide standard utils.
 #include <dirent_portable.h>
 #endif
+#include <unistd.h>
 #include <cinttypes>
 
 #include <cstdio>
@@ -55,22 +55,19 @@ bool validate(const char *dirname) {
     if (has_extension(name, extension)) {
       printf("validating: file %s ", name);
       fflush(nullptr);
-      size_t filelen = strlen(name);
-      char *fullpath = static_cast<char *>(malloc(dirlen + filelen + 1 + 1));
-      strcpy(fullpath, dirname);
-      if (needsep) {
-        fullpath[dirlen] = '/';
-        strcpy(fullpath + dirlen + 1, name);
-      } else {
-        strcpy(fullpath + dirlen, name);
-      }
-      auto [p, error] = simdjson::padded_string::load(fullpath);
+      size_t namelen = strlen(name);
+      size_t fullpathlen = dirlen + 1 + namelen + 1;
+      char *fullpath = static_cast<char *>(malloc(fullpathlen));
+      snprintf(fullpath, fullpathlen, "%s%s%s", dirname, needsep ? "/" : "", name);
+
+      simdjson::padded_string p;
+      auto error = simdjson::padded_string::load(fullpath).get(p);
       if (error) {
         std::cerr << "Could not load the file " << fullpath << std::endl;
         return EXIT_FAILURE;
       }
       simdjson::dom::parser parser;
-      auto [doc, errorcode] = parser.parse(p);
+      auto errorcode = parser.parse(p).error();
       ++how_many;
       printf("%s\n", errorcode == simdjson::error_code::SUCCESS ? "ok" : "invalid");
       if (contains("EXCLUDE", name)) {
@@ -112,7 +109,6 @@ bool validate(const char *dirname) {
 }
 
 int main(int argc, char *argv[]) {
-#ifndef _MSC_VER
   int c;
   while ((c = getopt(argc, argv, "a:")) != -1) {
     switch (c) {
@@ -130,9 +126,6 @@ int main(int argc, char *argv[]) {
       return EXIT_FAILURE;
     }
   }
-#else
-  int optind = 1;
-#endif
   if ((argc - optind) != 1) {
     std::cerr << "Usage: " << argv[0] << " <directorywithjsonfiles>"
               << std::endl;

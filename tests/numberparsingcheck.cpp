@@ -1,5 +1,4 @@
 #include <cstring>
-#include <dirent.h>
 #include <inttypes.h>
 #include <math.h>
 #include <stdbool.h>
@@ -10,6 +9,11 @@
 #define JSON_TEST_NUMBERS
 #endif
 
+#ifndef _MSC_VER
+#include <dirent.h>
+#else
+#include <dirent_portable.h>
+#endif
 #include "simdjson.h"
 
 // ulp distance
@@ -168,7 +172,8 @@ bool validate(const char *dirname) {
       } else {
         strcpy(fullpath + dirlen, name);
       }
-      auto [p, error] = simdjson::padded_string::load(fullpath);
+      simdjson::padded_string p;
+      auto error = simdjson::padded_string::load(fullpath).get(p);
       if (error) {
         std::cerr << "Could not load the file " << fullpath << std::endl;
         return EXIT_FAILURE;
@@ -179,7 +184,7 @@ bool validate(const char *dirname) {
       invalid_count = 0;
       total_count += float_count + int_count + invalid_count;
       simdjson::dom::parser parser;
-      auto [doc, err] = parser.parse(p);
+      auto err = parser.parse(p).error();
       bool isok = (err == simdjson::error_code::SUCCESS);
       if (int_count + float_count + invalid_count > 0) {
         printf("File %40s %s --- integers: %10zu floats: %10zu invalid: %10zu "

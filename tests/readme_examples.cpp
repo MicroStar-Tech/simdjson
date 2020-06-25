@@ -28,10 +28,9 @@ void basics_dom_1() {
     { "make": "Toyota", "model": "Tercel", "year": 1999, "tire_pressure": [ 29.8, 30.0, 30.2, 30.5 ] }
   ] )"_padded;
   dom::parser parser;
-  dom::array cars = parser.parse(cars_json).get<dom::array>();
 
-  // Iterating through an array of objects
-  for (dom::object car : cars) {
+  // Parse and iterate through each car
+  for (dom::object car : parser.parse(cars_json)) {
     // Accessing a field by name
     cout << "Make/Model: " << car["make"] << "/" << car["model"] << endl;
 
@@ -47,11 +46,13 @@ void basics_dom_1() {
     cout << "- Average tire pressure: " << (total_tire_pressure / 4) << endl;
 
     // Writing out all the information about the car
-    for (auto [key, value] : car) {
-      cout << "- " << key << ": " << value << endl;
+    for (auto field : car) {
+      cout << "- " << field.key << ": " << field.value << endl;
     }
   }
 }
+
+
 
 void basics_dom_2() {
   auto cars_json = R"( [
@@ -61,8 +62,36 @@ void basics_dom_2() {
   ] )"_padded;
   dom::parser parser;
   dom::element cars = parser.parse(cars_json);
-  cout << cars.at("0/tire_pressure/1") << endl; // Prints 39.9}
+  cout << cars.at("0/tire_pressure/1") << endl; // Prints 39.9
 }
+
+void basics_dom_3() {
+  auto abstract_json = R"( [
+    {  "12345" : {"a":12.34, "b":56.78, "c": 9998877}   },
+    {  "12545" : {"a":11.44, "b":12.78, "c": 11111111}  }
+  ] )"_padded;
+  dom::parser parser;
+
+  // Parse and iterate through an array of objects
+  for (dom::object obj : parser.parse(abstract_json)) {
+    for(const auto& key_value : obj) {
+      cout << "key: " << key_value.key << " : ";
+      dom::object innerobj = key_value.value;
+      cout << "a: " << double(innerobj["a"]) << ", ";
+      cout << "b: " << double(innerobj["b"]) << ", ";
+      cout << "c: " << int64_t(innerobj["c"]) << endl;
+    }
+  }
+}
+
+void basics_dom_4() {
+  auto abstract_json = R"(
+    {  "str" : { "123" : {"abc" : 3.14 } } } )"_padded;
+  dom::parser parser;
+  double v = parser.parse(abstract_json)["str"]["123"]["abc"];
+  cout << "number: " << v << endl;
+}
+
 
 namespace treewalk_1 {
   void print_json(dom::element element) {
@@ -107,6 +136,31 @@ namespace treewalk_1 {
   void basics_treewalk_1() {
     dom::parser parser;
     print_json(parser.load("twitter.json"));
+  }
+}
+
+#ifdef SIMDJSON_CPLUSPLUS17
+void basics_cpp17_1() {
+  padded_string json = R"(  { "foo": 1, "bar": 2 }  )"_padded;
+  dom::parser parser;
+  dom::object object;
+  auto error = parser.parse(json).get(object);
+  if (error) { cerr << error << endl; return; }
+  for (auto [key, value] : object) {
+    cout << key << " = " << value << endl;
+  }
+}
+#endif
+
+void basics_cpp17_2() {
+  // C++ 11 version for comparison
+  padded_string json = R"(  { "foo": 1, "bar": 2 }  )"_padded;
+  dom::parser parser;
+  dom::object object;
+  auto error = parser.parse(json).get(object);
+  if (!error) { cerr << error << endl; return; }
+  for (dom::key_value_pair field : object) {
+    cout << field.key << " = " << field.value << endl;
   }
 }
 
@@ -157,31 +211,88 @@ void performance_1() {
   cout << doc2 << endl;
 }
 
+#ifdef SIMDJSON_CPLUSPLUS17
+SIMDJSON_PUSH_DISABLE_ALL_WARNINGS
 // The web_request part of this is aspirational, so we compile as much as we can here
 void performance_2() {
-  dom::parser parser(1024*1024); // Never grow past documents > 1MB
-//   for (web_request request : listen()) {
-    auto [doc, error] = parser.parse("1"_padded/*request.body*/);
-//     // If the document was above our limit, emit 413 = payload too large
+  dom::parser parser(1000*1000); // Never grow past documents > 1MB
+  /* for (web_request request : listen()) */ {
+    dom::element doc;
+    auto error = parser.parse("1"_padded/*request.body*/).get(doc);
+    // If the document was above our limit, emit 413 = payload too large
     if (error == CAPACITY) { /* request.respond(413); continue; */ }
-//     // ...
-//   }
+    // ...
+  }
 }
 
 // The web_request part of this is aspirational, so we compile as much as we can here
 void performance_3() {
   dom::parser parser(0); // This parser will refuse to automatically grow capacity
-  simdjson::error_code allocate_error = parser.allocate(1024*1024); // This allocates enough capacity to handle documents <= 1MB
-  if (allocate_error) { cerr << allocate_error << endl; exit(1); }
+  auto error = parser.allocate(1000*1000); // This allocates enough capacity to handle documents <= 1MB
+  if (error) { cerr << error << endl; exit(1); }
 
-  // for (web_request request : listen()) {
-    auto [doc, error] = parser.parse("1"_padded/*request.body*/);
+  /* for (web_request request : listen()) */ {
+    dom::element doc;
+    auto error = parser.parse("1"_padded/*request.body*/).get(doc);
     // If the document was above our limit, emit 413 = payload too large
     if (error == CAPACITY) { /* request.respond(413); continue; */ }
     // ...
-  // }
+  }
+}
+SIMDJSON_POP_DISABLE_WARNINGS
+#endif
+
+void minify() {
+  const char * some_string = "[ 1, 2, 3, 4] ";
+  size_t length = strlen(some_string);
+  std::unique_ptr<char[]> buffer{new(std::nothrow) char[length + simdjson::SIMDJSON_PADDING]};
+  size_t new_length{};
+  auto error = simdjson::minify(some_string, length, buffer.get(), new_length);
+  if(error != simdjson::SUCCESS) {
+    std::cerr << "error " << error << std::endl;
+    abort();
+  } else {
+    const char * expected_string = "[1,2,3,4]";
+    size_t expected_length = strlen(expected_string);
+    if(expected_length != new_length) {
+      std::cerr << "mismatched length (error) " << std::endl;
+      abort();
+    }
+    for(size_t i = 0; i < new_length; i++) {
+      if(expected_string[i] != buffer.get()[i]) {
+        std::cerr << "mismatched content (error) " << std::endl;
+        abort();
+      }
+    }
+  }
+}
+
+bool is_correct() {
+  const char * some_string = "[ 1, 2, 3, 4] ";
+  size_t length = strlen(some_string);
+  bool is_ok = simdjson::validate_utf8(some_string, length);
+  return is_ok;
+}
+
+bool is_correct_string_view() {
+  const char * some_string = "[ 1, 2, 3, 4] ";
+  size_t length = strlen(some_string);
+  std::string_view v(some_string, length);
+  bool is_ok = simdjson::validate_utf8(v);
+  return is_ok;
+}
+
+bool is_correct_string() {
+  const std::string some_string = "[ 1, 2, 3, 4] ";
+  bool is_ok = simdjson::validate_utf8(some_string);
+  return is_ok;
 }
 
 int main() {
+  basics_dom_1();
+  basics_dom_2();
+  basics_dom_3();
+  basics_dom_4();
+  minify();
   return 0;
 }

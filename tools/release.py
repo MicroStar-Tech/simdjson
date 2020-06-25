@@ -150,9 +150,14 @@ for line in fileinput.input(cmakefile, inplace=1, backup='.bak'):
 
 
 print("modified "+cmakefile+", a backup was made")
+doxyfile = maindir + os.sep + "Doxyfile"
+for line in fileinput.input(doxyfile, inplace=1, backup='.bak'):
+    line = re.sub('PROJECT_NUMBER         = "\d+\.\d+\.\d+','PROJECT_NUMBER         = "'+newversionstring, line.rstrip())
+    print(line)
+print("modified "+doxyfile+", a backup was made")
 
 scriptlocation = os.path.dirname(os.path.abspath(__file__))
 
 
-print("Please run the tests before issuing a release, do make test && make amalgamate \n")
+print("Please run the tests before issuing a release, do make test && make amalgamate_test \n")
 print("to issue release, enter \n git commit -a && git push  &&  git tag -a v"+toversionstring(*newversion)+" -m \"version "+toversionstring(*newversion)+"\" &&  git push --tags \n")

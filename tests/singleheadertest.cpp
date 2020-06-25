@@ -5,13 +5,14 @@
 using namespace simdjson;
 
 int main() {
-  const char *filename = JSON_TEST_PATH;
-  padded_string p = get_corpus(filename);
+  const char *filename = SIMDJSON_BENCHMARK_DATA_DIR "/twitter.json";
   dom::parser parser;
-  auto [doc, error] = parser.parse(p);
-  if(error) {
+  dom::element doc;
+  auto error = parser.load(filename).get(doc);
+  if (error) {
     std::cerr << error << std::endl;
     return EXIT_FAILURE;
   }
+  std::cout << doc << std::endl;
   return EXIT_SUCCESS;
 }

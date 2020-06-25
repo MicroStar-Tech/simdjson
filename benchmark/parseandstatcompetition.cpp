@@ -48,13 +48,14 @@ void print_stat(const stat_t &s) {
          s.true_count, s.false_count);
 }
 
-
 really_inline void simdjson_process_atom(stat_t &s,
                                          simdjson::dom::element element) {
   if (element.is<double>()) {
     s.number_count++;
   } else if (element.is<bool>()) {
-    if (element.get<bool>()) {
+    simdjson::error_code error;
+    bool v;
+    if (not (error = element.get(v)) && v) {
       s.true_count++;
     } else {
       s.false_count++;
@@ -65,11 +66,17 @@ really_inline void simdjson_process_atom(stat_t &s,
 }
 
 void simdjson_recurse(stat_t &s, simdjson::dom::element element) {
+  error_code error;
   if (element.is<simdjson::dom::array>()) {
     s.array_count++;
-    auto [array, array_error] = element.get<simdjson::dom::array>();
+    dom::array array;
+    if ((error = element.get(array))) {
+      std::cerr << error << std::endl;
+      abort();
+    }
     for (auto child : array) {
-      if (child.is<simdjson::dom::array>() || child.is<simdjson::dom::object>()) {
+      if (child.is<simdjson::dom::array>() ||
+          child.is<simdjson::dom::object>()) {
         simdjson_recurse(s, child);
       } else {
         simdjson_process_atom(s, child);
@@ -77,12 +84,17 @@ void simdjson_recurse(stat_t &s, simdjson::dom::element element) {
     }
   } else if (element.is<simdjson::dom::object>()) {
     s.object_count++;
-    auto [object, object_error] = element.get<simdjson::dom::object>();
-    for (auto [key, value] : object) {
-      if (value.is<simdjson::dom::array>() || value.is<simdjson::dom::object>()) {
-        simdjson_recurse(s, value);
+    dom::object object;
+    if ((error = element.get(object))) {
+      std::cerr << error << std::endl;
+      abort();
+    }
+    for (auto field : object) {
+      if (field.value.is<simdjson::dom::array>() ||
+          field.value.is<simdjson::dom::object>()) {
+        simdjson_recurse(s, field.value);
       } else {
-        simdjson_process_atom(s, value);
+        simdjson_process_atom(s, field.value);
       }
     }
   } else {
@@ -90,17 +102,125 @@ void simdjson_recurse(stat_t &s, simdjson::dom::element element) {
   }
 }
 
-__attribute__((noinline)) stat_t
-simdjson_compute_stats(const simdjson::padded_string &p) {
+never_inline stat_t simdjson_compute_stats(const simdjson::padded_string &p) {
   stat_t s{};
   simdjson::dom::parser parser;
-  auto [doc, error] = parser.parse(p);
+  simdjson::dom::element doc;
+  auto error = parser.parse(p).get(doc);
   if (error) {
     s.valid = false;
     return s;
   }
   s.valid = true;
   simdjson_recurse(s, doc);
+  return s;
+}
+
+///
+struct Stat {
+  size_t objectCount;
+  size_t arrayCount;
+  size_t numberCount;
+  size_t stringCount;
+  size_t trueCount;
+  size_t falseCount;
+  size_t nullCount;
+
+  size_t memberCount;  // Number of members in all objects
+  size_t elementCount; // Number of elements in all arrays
+  size_t stringLength; // Number of code units in all strings
+};
+
+static void GenStatPlus(Stat &stat, const dom::element &v) {
+  switch (v.type()) {
+  case dom::element_type::ARRAY:
+    for (dom::element child : dom::array(v)) {
+      GenStatPlus(stat, child);
+      stat.elementCount++;
+    }
+    stat.arrayCount++;
+    break;
+  case dom::element_type::OBJECT:
+    for (dom::key_value_pair kv : dom::object(v)) {
+      GenStatPlus(stat, dom::element(kv.value));
+      stat.memberCount++;
+      stat.stringCount++;
+    }
+    stat.objectCount++;
+    break;
+  case dom::element_type::INT64:
+  case dom::element_type::UINT64:
+  case dom::element_type::DOUBLE:
+    stat.numberCount++;
+    break;
+  case dom::element_type::STRING: {
+    stat.stringCount++;
+    auto sv = std::string_view(v);
+    stat.stringLength += sv.size();
+  } break;
+  case dom::element_type::BOOL:
+    if (bool(v)) {
+      stat.trueCount++;
+    } else {
+      stat.falseCount++;
+    }
+    break;
+  case dom::element_type::NULL_VALUE:
+    ++stat.nullCount;
+    break;
+  }
+}
+
+static void RapidGenStat(Stat &stat, const rapidjson::Value &v) {
+  switch (v.GetType()) {
+  case kNullType:
+    stat.nullCount++;
+    break;
+  case kFalseType:
+    stat.falseCount++;
+    break;
+  case kTrueType:
+    stat.trueCount++;
+    break;
+
+  case kObjectType:
+    for (Value::ConstMemberIterator m = v.MemberBegin(); m != v.MemberEnd();
+         ++m) {
+      stat.stringLength += m->name.GetStringLength();
+      RapidGenStat(stat, m->value);
+    }
+    stat.objectCount++;
+    stat.memberCount += (v.MemberEnd() - v.MemberBegin());
+    stat.stringCount += (v.MemberEnd() - v.MemberBegin()); // Key
+    break;
+
+  case kArrayType:
+    for (Value::ConstValueIterator i = v.Begin(); i != v.End(); ++i)
+      RapidGenStat(stat, *i);
+    stat.arrayCount++;
+    stat.elementCount += v.Size();
+    break;
+
+  case kStringType:
+    stat.stringCount++;
+    stat.stringLength += v.GetStringLength();
+    break;
+
+  case kNumberType:
+    stat.numberCount++;
+    break;
+  }
+}
+never_inline Stat rapidjson_compute_stats_ref(const rapidjson::Value &doc) {
+  Stat s{};
+  RapidGenStat(s, doc);
+  return s;
+}
+
+never_inline Stat
+simdjson_compute_stats_refplus(const simdjson::dom::element &doc) {
+  Stat s{};
+  GenStatPlus(s, doc);
   return s;
 }
 
@@ -147,9 +267,8 @@ void sajson_traverse(stat_t &stats, const sajson::value &node) {
   }
 }
 
-__attribute__((noinline)) stat_t
-sasjon_compute_stats(const simdjson::padded_string &p) {
-  stat_t answer;
+never_inline stat_t sasjon_compute_stats(const simdjson::padded_string &p) {
+  stat_t answer{};
   char *buffer = (char *)malloc(p.size());
   if (buffer == nullptr) {
     return answer;
@@ -209,9 +328,8 @@ void rapid_traverse(stat_t &stats, const rapidjson::Value &v) {
   }
 }
 
-__attribute__((noinline)) stat_t
-rapid_compute_stats(const simdjson::padded_string &p) {
-  stat_t answer;
+never_inline stat_t rapid_compute_stats(const simdjson::padded_string &p) {
+  stat_t answer{};
   char *buffer = (char *)malloc(p.size() + 1);
   if (buffer == nullptr) {
     return answer;
@@ -236,9 +354,9 @@ rapid_compute_stats(const simdjson::padded_string &p) {
   return answer;
 }
 
-__attribute__((noinline)) stat_t
+never_inline stat_t
 rapid_accurate_compute_stats(const simdjson::padded_string &p) {
-  stat_t answer;
+  stat_t answer{};
   char *buffer = (char *)malloc(p.size() + 1);
   if (buffer == nullptr) {
     return answer;
@@ -292,18 +410,19 @@ int main(int argc, char *argv[]) {
     std::cerr << "warning: ignoring everything after " << argv[optind + 1]
               << std::endl;
   }
-  auto [p, error] = simdjson::padded_string::load(filename);
+  simdjson::padded_string p;
+  auto error = simdjson::padded_string::load(filename).get(p);
   if (error) {
     std::cerr << "Could not load the file " << filename << std::endl;
     return EXIT_FAILURE;
   }
-
+  // Gigabyte: https://en.wikipedia.org/wiki/Gigabyte
   if (verbose) {
     std::cout << "Input has ";
-    if (p.size() > 1024 * 1024)
-      std::cout << p.size() / (1024 * 1024) << " MB ";
-    else if (p.size() > 1024)
-      std::cout << p.size() / 1024 << " KB ";
+    if (p.size() > 1000 * 1000)
+      std::cout << p.size() / (1000 * 1000) << " MB ";
+    else if (p.size() > 1000)
+      std::cout << p.size() / 1000 << " KB ";
     else
       std::cout << p.size() << " B ";
     std::cout << std::endl;
@@ -331,7 +450,7 @@ int main(int argc, char *argv[]) {
   assert(stat_equal(s1, s2));
   assert(stat_equal(s1, s3));
   int repeat = 50;
-  int volume = p.size();
+  size_t volume = p.size();
   if (just_data) {
     printf("name cycles_per_byte cycles_per_byte_err gb_per_s gb_per_s_err \n");
   }
@@ -339,8 +458,31 @@ int main(int argc, char *argv[]) {
             repeat, volume, !just_data);
   BEST_TIME("RapidJSON           ", rapid_compute_stats(p).valid, true, ,
             repeat, volume, !just_data);
-  BEST_TIME("RapidJSON (precise) ", rapid_accurate_compute_stats(p).valid, true, ,
-            repeat, volume, !just_data);
+  BEST_TIME("RapidJSON (precise) ", rapid_accurate_compute_stats(p).valid, true,
+            , repeat, volume, !just_data);
   BEST_TIME("sasjon              ", sasjon_compute_stats(p).valid, true, ,
             repeat, volume, !just_data);
+  if (!just_data) {
+    printf("API traversal tests\n");
+    printf("Based on https://github.com/miloyip/nativejson-benchmark\n");
+    simdjson::dom::parser parser;
+    simdjson::dom::element doc;
+    auto error = parser.parse(p).get(doc);
+    if (error) {
+      std::cerr << error << std::endl;
+    }
+    size_t refval = simdjson_compute_stats_refplus(doc).objectCount;
+
+    BEST_TIME("simdjson            ",
+              simdjson_compute_stats_refplus(doc).objectCount, refval, , repeat,
+              volume, !just_data);
+    char *buffer = (char *)malloc(p.size() + 1);
+    memcpy(buffer, p.data(), p.size());
+    buffer[p.size()] = '\0';
+    rapidjson::Document d;
+    d.ParseInsitu<kParseValidateEncodingFlag>(buffer);
+    BEST_TIME("rapid              ", rapidjson_compute_stats_ref(d).objectCount,
+              refval, , repeat, volume, !just_data);
+    free(buffer);
+  }
 }
