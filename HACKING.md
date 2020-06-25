@@ -4,13 +4,14 @@ Hacking simdjson
 Here is wisdom about how to build, test and run simdjson from within the repository. *Users* of
 simdjson should use the released simdjson.h and simdjson.cpp files.
 
+If you plan to contribute to simdjson, please read our [CONTRIBUTING](https://github.com/simdjson/simdjson/blob/master/CONTRIBUTING.md) guide.
+
 Directory Structure and Source
 ------------------------------
 
 simdjson's source structure, from the top level, looks like this:
 
-* **Makefile:** The main Makefile for Linux. This is not the same as CMakeLists.txt.
-* **CMakeLists.txt:** A Makefile generator for non-default cases and options.
+* **CMakeLists.txt:** The main build system.
 * **include:** User-facing declarations and inline definitions (most user-facing functions are inlined).
   * simdjson.h: A "master include" that includes files from include/simdjson/. This is equivalent to
     the distributed simdjson.h.
@@ -20,14 +21,16 @@ simdjson's source structure, from the top level, looks like this:
   implementations).
   * simdjson.cpp: A "master source" that includes all implementation files from src/. This is
     equivalent to the distributed simdjson.cpp.
-  * arm64/|fallback/|haswell/|westmere/: Architecture-specific implementations. All functions are 
+  * arm64/|fallback/|haswell/|westmere/: Architecture-specific implementations. All functions are
     Each architecture defines its own namespace, e.g. simdjson::haswell.
   * generic/: Generic implementations of the simdjson parser. These files may be included and
     compiled multiple times, from whichever architectures use them. They assume they are already
     enclosed in a namespace, e.g.:
     ```c++
-    namespace simdjson::haswell {
-      #include "generic/stage1_find_marks.h"
+    namespace simdjson {
+      namespace haswell {
+        #include "generic/stage1/json_structural_indexer.h"
+      }
     }
     ```
 
@@ -35,13 +38,27 @@ Other important files and directories:
 * **.drone.yml:** Definitions for Drone CI.
 * **.appveyor.yml:** Definitions for Appveyor CI (Windows).
 * **.circleci:** Definitions for Circle CI.
-* **amalgamation.sh:** Generates singleheader/simdjson.h and singleheader/simdjson.cpp for release.
+* **amalgamate.sh:** Generates singleheader/simdjson.h and singleheader/simdjson.cpp for release.
 * **benchmark:** This is where we do benchmarking. Benchmarking is core to every change we make; the
   cardinal rule is don't regress performance without knowing exactly why, and what you're trading
-  for it. If you're not sure what else to do to check your performance, this is always a good start:
+  for it. Many of our benchmarks are microbenchmarks. We are effectively doing controlled scientific experiments for the purpose of understanding what affects our performance. So we simplify as much as possible. We try to avoid irrelevant factors such as page faults, interrupts, unnnecessary system calls. We recommend checking the performance as follows:
   ```bash
-  make parse && ./parse jsonexamples/twitter.json
+  mkdir build
+  cd build
+  cmake ..
+  cmake --build . --config Release
+  benchmark/parse ../jsonexamples/twitter.json
   ```
+  The last line becomes `./benchmark/Release/parse.exe ../jsonexample/twitter.json` under Windows. You may also use Google Benchmark:
+  ```bash
+  mkdir build
+  cd build
+  cmake ..
+  cmake --build . --target bench_parse_call --config Release
+  ./benchmark/bench_parse_call
+  ```
+  The last line becomes `./benchmark/Release/bench_parse_call.exe` under Windows. Under Windows, you can also build with the clang compiler by adding `-T ClangCL` to the call to `cmake ..`: `cmake .. - TClangCL`.
+* **fuzz:** The source for fuzz testing. This lets us explore important edge and middle cases
 * **fuzz:** The source for fuzz testing. This lets us explore important edge and middle cases
   automatically, and is run in CI.
 * **jsonchecker:** A set of JSON files used to check different functionality of the parser.
@@ -52,14 +69,60 @@ Other important files and directories:
 * **singleheader:** Contains generated simdjson.h and simdjson.cpp that we release.
 * **test:** The tests are here. basictests.cpp and errortests.cpp are the primary ones.
 * **tools:** Source for executables that can be distributed with simdjson
-
 > **Don't modify the files in singleheader/ directly; these are automatically generated.**
-> 
+>
 > While we distribute those files on release, we *maintain* the files under include/ and src/.
 
 While simdjson distributes just two files from the singleheader/ directory, we *maintain* the code in
 multiple files under include/ and src/. include/simdjson.h and src/simdjson.cpp are the "spine" for
 these, and you can include
+
+
+
+Runtime Dispatching
+--------------------
+
+A key feature of simdjson is the ability to compile different processing kernels, optimized for specific instruction sets, and to select
+the most appropriate kernel at runtime. This ensures that users get the very best performance while still enabling simdjson to run everywhere.
+This technique is frequently called runtime dispatching. The simdjson achieves runtime dispatching entirely in C++: we do not assume
+that the user is building the code using CMake, for example.
+
+To make runtime dispatching work, it is critical that the code be compiled for the lowest supported processor. In particular, you should
+not use flags such as -mavx2, /arch:AVX2 and so forth while compiling simdjson. When you do so, you allow the compiler to use advanced
+instructions. In turn, these advanced instructions present in the code may cause a runtime failure if the runtime processor does not
+support them. Even a simple loop, compiled with these flags, might generate binary code that only run on advanced processors.
+
+So we compile simdjson for a generic processor. Our users should do the same if they want simdjson's runtime dispatch to work. It is important
+to understand that if runtime dispatching does not work, then simdjson will cause crashes on older processors. Of course, if a user chooses
+to compile their code for a specific instruction set (e.g., AVX2), they are responsible for the failures if they later run their code
+on a processor that does not support AVX2. Yet, if we were to entice these users to do so, we would share the blame: thus we carefully instruct
+users to compile their code in a generic way without doing anything to enable advanced instructions.
+
+
+We only use runtime dispatching on x64 (AMD/Intel) platforms, at the moment. On ARM processors, we would need a standard way to query, at runtime,
+the processor for its supported features. We do not know how to do so on ARM systems in general. Thankfully it is not yet a concern: 64-bit ARM
+processors are fairly uniform as far as the instruction sets they support.
+
+
+In all cases, simdjson uses advanced instructions by relying on  "intrinsic functions": we do not write assembly code. The intrinsic functions
+are special functions that the compiler might recognize and translate into fast code. To make runtime dispatching work, we rely on the fact that
+the header providing these instructions
+(intrin.h under Visual Studio, x86intrin.h elsewhere) defines all of the intrinsic functions, including those that are not supported
+processor.
+
+At this point, we are require to use one of two main strategies.
+
+1. On POSIX systems, the main compilers (LLVM clang, GNU gcc) allow us to use any intrinsic function after including the header, but they fail to inline the resulting instruction if the target processor does not support them. Because we compile for a generic processor, we would not be able to use most intrinsic functions. Thankfully, more recent versions of these compilers allow us to flag a region of code with a specific target, so that we can compile only some of the code with support for advanced instructions. Thus in our C++, one might notice macros like `TARGET_HASWELL`. It is then our responsability, at runtime, to only run the regions of code (that we call kernels) matching the properties of the runtime processor. The benefit of this approach is that the compiler not only let us use intrinsic functions, but it can also optimize the rest of the code in the kernel with advanced instructions we enabled.
+
+2. Under Visual Studio, the problem is somewhat simpler. Visual Studio will not only provide the intrinsic functions, but it will also allow us to use them. They will compile just fine. It is at runtime that they may cause a crash. So we do not need to mark regions of code for compilation toward advanced processors (e.g., with  `TARGET_HASWELL` macros). The downside of the Visual Studio approach is that the compiler is not allowed to use advanced instructions others than those we specify. In principle, this means that Visual Studio has weaker optimization opportunities.
+
+
+
+We also handle the special case where a user is compiling using LLVM clang under Windows, [using the Visual Studio toolchain](https://devblogs.microsoft.com/cppblog/clang-llvm-support-in-visual-studio/). If you compile with LLVM clang under Visual Studio, then the header files (intrin.h or x86intrin.h) no longer provides the intrinsic functions that are unsupported by the processor. This appears to be deliberate on the part of the LLVM engineers. With a few lines of code, we handle this scenario just like LLVM clang under a POSIX system, but forcing the inclusion of the specific headers, and rolling our own intrinsic function as needed.
+
+
+
+
 
 Regenerating Single Headers From Master
 ---------------------------------------
@@ -68,58 +131,40 @@ simdjson.h and simdjson.cpp are not always up to date in master. To ensure you h
 you can regenerate them by running this at the top level:
 
 ```bash
-make amalgamate
+mkdir build
+cd build
+cmake ..
+cmake --build . --target amalgamate
 ```
 
-The amalgamator is at `amalgamation.sh` at the top level. It generates singleheader/simdjson.h by
+The amalgamator is at `amalgamate.sh` at the top level. It generates singleheader/simdjson.h by
 reading through include/simdjson.h, copy/pasting each header file into the amalgamated file at the
 point it gets included (but only once per header). singleheader/simdjson.cpp is generated from
 src/simdjson.cpp the same way, except files under generic/ may be included and copy/pasted multiple
 times.
 
-### Usage (old-school Makefile on platforms like Linux or macOS)
+### Usage (CMake on 64-bit platforms like Linux, freeBSD or macOS)
 
-Requirements: recent clang or gcc, and make. We recommend at least GNU GCC/G++ 7 or LLVM clang 6. A 64-bit system like Linux or macOS is expected.
+Requirements: In addition to git, we require a recent version of CMake as well as bash.
 
-To test:
-
-```
-make
-make test
-```
-
-To run benchmarks:
-
-```
-make parse
-./parse jsonexamples/twitter.json
-```
-
-Under Linux, the `parse` command gives a detailed analysis of the performance counters.
-
-To run comparative benchmarks (with other parsers):
-
-```
-make benchmark
-```
-
-### Usage (CMake on 64-bit platforms like Linux or macOS)
-
-Requirements: We require a recent version of cmake. On macOS, the easiest way to install cmake might be to use [brew](https://brew.sh) and then type
-
+1. On macOS, the easiest way to install cmake might be to use [brew](https://brew.sh) and then type
 ```
 brew install cmake
 ```
-
-There is an [equivalent brew on Linux which works the same way as well](https://linuxbrew.sh).
-
-You need a recent compiler like clang or gcc. We recommend at least GNU GCC/G++ 7 or LLVM clang 6. For example, you can install a recent compiler with brew:
-
+2. Under Linux, you might be able to install CMake as follows:
 ```
-brew install gcc@8
+apt-get update -qq
+apt-get install -y cmake
+```
+3. On freeBSD, you might be able to install bash and CMake as follows:
+```
+pkg update -f
+pkg install bash
+pkg install cmake
 ```
 
-Optional: You need to tell cmake which compiler you wish to use by setting the CC and CXX variables. Under bash, you can do so with commands such as `export CC=gcc-7` and `export CXX=g++-7`.
+You need a recent compiler like clang or gcc. We recommend at least GNU GCC/G++ 7 or LLVM clang 6.
+
 
 Building: While in the project repository, do the following:
 
@@ -127,8 +172,8 @@ Building: While in the project repository, do the following:
 mkdir build
 cd build
 cmake ..
-make
-make test
+cmake --build .
+ctest
 ```
 
 CMake will build a library. By default, it builds a shared library (e.g., libsimdjson.so on Linux).
@@ -139,11 +184,11 @@ You can build a static library:
 mkdir buildstatic
 cd buildstatic
 cmake -DSIMDJSON_BUILD_STATIC=ON ..
-make
-make test
+cmake --build .
+ctest
 ```
 
-In some cases, you may want to specify your compiler, especially if the default compiler on your system is too old. You may proceed as follows:
+In some cases, you may want to specify your compiler, especially if the default compiler on your system is too old.  You need to tell cmake which compiler you wish to use by setting the CC and CXX variables. Under bash, you can do so with commands such as `export CC=gcc-7` and `export CXX=g++-7`. You can also do it as part of the `cmake` command: `cmake .. -DCMAKE_CXX_COMPILER=g++`.  You may proceed as follows:
 
 ```
 brew install gcc@8
@@ -151,9 +196,15 @@ mkdir build
 cd build
 export CXX=g++-8 CC=gcc-8
 cmake ..
-make
-make test
+cmake --build .
+ctest
 ```
+
+If your compiler does not default on C++11 support or better you may get failing tests. If so, you may be able to exclude the failing  tests by replacing `ctest` with `ctest  -E "^quickstart$"`.
+
+Note that the name of directory (`build`) is arbitrary, you can name it as you want (e.g., `buildgcc`) and you can have as many different such directories as you would like (one per configuration).
+
+
 
 ### Usage (CMake on 64-bit Windows using Visual Studio)
 
@@ -161,10 +212,28 @@ We assume you have a common 64-bit Windows PC with at least Visual Studio 2017 a
 
 - Grab the simdjson code from GitHub, e.g., by cloning it using [GitHub Desktop](https://desktop.github.com/).
 - Install [CMake](https://cmake.org/download/). When you install it, make sure to ask that `cmake` be made available from the command line. Please choose a recent version of cmake.
-- Create a subdirectory within simdjson, such as `VisualStudio`.
-- Using a shell, go to this newly created directory.
-- Type `cmake -DCMAKE_GENERATOR_PLATFORM=x64 ..` in the shell while in the `VisualStudio` repository. (Alternatively, if you want to build a DLL, you may use the command line `cmake -DCMAKE_GENERATOR_PLATFORM=x64 -DSIMDJSON_BUILD_STATIC=OFF ..`.)
+- Create a subdirectory within simdjson, such as `build`.
+- Using a shell, go to this newly created directory. You can start a shell directly from GitHub Desktop (Repository > Open in Command Prompt).
+- Type `cmake -DCMAKE_GENERATOR_PLATFORM=x64 ..` in the shell while in the `build` repository. (Alternatively, if you want to build a DLL, you may use the command line `cmake -DCMAKE_GENERATOR_PLATFORM=x64 -DSIMDJSON_BUILD_STATIC=OFF ..`.)
 - This last command (`cmake ...`) created a Visual Studio solution file in the newly created directory (e.g., `simdjson.sln`). Open this file in Visual Studio. You should now be able to build the project and run the tests. For example, in the `Solution Explorer` window (available from the `View` menu), right-click `ALL_BUILD` and select `Build`. To test the code, still in the `Solution Explorer` window, select `RUN_TESTS` and select `Build`.
+
+
+Though having Visual Studio installed is necessary, one can build simdjson using only cmake commands:
+
+- `mkdir build`
+- `cd build`
+- `cmake ..`
+- `cmake --build . -config Release`
+
+
+Furthermore, if you have installed LLVM clang on Windows, for example as a component of Visual Studio 2019, you can configure and build simdjson using LLVM clang on Windows using cmake:
+
+
+- `mkdir build`
+- `cd build`
+- `cmake ..  -T ClangCL`
+- `cmake --build . -config Release`
+
 
 ### Usage (Using `vcpkg` on 64-bit Windows, Linux and macOS)
 
@@ -187,7 +256,7 @@ On Windows (64-bit):
 will build and install `simdjson` as a shared library.
 
 ```
-.\vcpkg.exe install simdjson:x64-windows-static  
+.\vcpkg.exe install simdjson:x64-windows-static
 ```
 
 will build and install `simdjson` as a static library.
@@ -300,6 +369,213 @@ This helps as we redefine some new characters as pseudo-structural such as the c
 
 > { "foo" : 1.5, "bar" : 1.5 GEOFF_IS_A_DUMMY bla bla , "baz", null }
 
+
+
+### UTF-8 validation (lookup2)
+
+The simdjson library relies on the lookup2 algorithm for UTF-8 validation on x64 platforms.
+
+This algorithm validate the length of multibyte characters (that each multibyte character has the right number of continuation characters, and that all continuation characters are part of a multibyte  character).
+
+####  Algorithm
+
+This algorithm compares *expected* continuation characters with *actual* continuation bytes, and emits an error anytime there is a mismatch.
+
+For example, in the string "𝄞₿֏ab", which has a 4-, 3-, 2- and 1-byte
+characters, the file will look like this:
+
+| Character             | 𝄞  |    |    |    | ₿  |    |    | ֏  |    | a  | b  |
+|-----------------------|----|----|----|----|----|----|----|----|----|----|----|
+| Character Length      |  4 |    |    |    |  3 |    |    |  2 |    |  1 |  1 |
+| Byte                  | F0 | 9D | 84 | 9E | E2 | 82 | BF | D6 | 8F | 61 | 62 |
+| is_second_byte        |    |  X |    |    |    |  X |    |    |  X |    |    |
+| is_third_byte         |    |    |  X |    |    |    |  X |    |    |    |    |
+| is_fourth_byte        |    |    |    |  X |    |    |    |    |    |    |    |
+| expected_continuation |    |  X |  X |  X |    |  X |  X |    |  X |    |    |
+| is_continuation       |    |  X |  X |  X |    |  X |  X |    |  X |    |    |
+
+The errors here are basically (Second Byte OR Third Byte OR Fourth Byte == Continuation):
+
+- **Extra Continuations:** Any continuation that is not a second, third or fourth byte is not
+  part of a valid 2-, 3- or 4-byte character and is thus an error. It could be that it's just
+  floating around extra outside of any character, or that there is an illegal 5-byte character,
+  or maybe it's at the beginning of the file before any characters have started; but it's an
+  error in all these cases.
+- **Missing Continuations:** Any second, third or fourth byte that *isn't* a continuation is an error, because that means
+  we started a new character before we were finished with the current one.
+
+####  Getting the Previous Bytes
+
+Because we want to know if a byte is the *second* (or third, or fourth) byte of a multibyte
+character, we need to "shift the bytes" to find that out. This is what they mean:
+
+- `is_continuation`: if the current byte is a continuation.
+- `is_second_byte`: if 1 byte back is the start of a 2-, 3- or 4-byte character.
+- `is_third_byte`: if 2 bytes back is the start of a 3- or 4-byte character.
+- `is_fourth_byte`: if 3 bytes back is the start of a 4-byte character.
+
+We use shuffles to go n bytes back, selecting part of the current `input` and part of the
+`prev_input` (search for `.prev<1>`, `.prev<2>`, etc.). These are passed in by the caller
+function, because the 1-byte-back data is used by other checks as well.
+
+####   Getting the Continuation Mask
+
+Once we have the right bytes, we have to get the masks. To do this, we treat UTF-8 bytes as
+numbers, using signed `<` and `>` operations to check if they are continuations or leads.
+In fact, we treat the numbers as *signed*, partly because it helps us, and partly because
+Intel's SIMD presently only offers signed `<` and `>` operations (not unsigned ones).
+
+In UTF-8, bytes that start with the bits 110, 1110 and 11110 are 2-, 3- and 4-byte "leads,"
+respectively, meaning they expect to have 1, 2 and 3 "continuation bytes" after them.
+Continuation bytes start with 10, and ASCII (1-byte characters) starts with 0.
+
+When treated as signed numbers, they look like this:
+
+| Type         | High Bits  | Binary Range | Signed |
+|--------------|------------|--------------|--------|
+| ASCII        | `0`        | `01111111`   |   127  |
+|              |            | `00000000`   |     0  |
+| 4+-Byte Lead | `1111`     | `11111111`   |    -1  |
+|              |            | `11110000    |   -16  |
+| 3-Byte Lead  | `1110`     | `11101111`   |   -17  |
+|              |            | `11100000    |   -32  |
+| 2-Byte Lead  | `110`      | `11011111`   |   -33  |
+|              |            | `11000000    |   -64  |
+| Continuation | `10`       | `10111111`   |   -65  |
+|              |            | `10000000    |  -128  |
+
+This makes it pretty easy to get the continuation mask! It's just a single comparison:
+
+```
+is_continuation = input < -64`
+```
+
+We can do something similar for the others, but it takes two comparisons instead of one: "is
+the start of a 4-byte character" is `< -32` and `> -65`, for example. And 2+ bytes is `< 0` and
+`> -64`. Surely we can do better, they're right next to each other!
+
+####  Getting the is_xxx Masks: Shifting the Range
+
+Notice *why* continuations were a single comparison. The actual *range* would require two
+comparisons--`< -64` and `> -129`--but all characters are always greater than -128, so we get
+that for free. In fact, if we had *unsigned* comparisons, 2+, 3+ and 4+ comparisons would be
+just as easy: 4+ would be `> 239`, 3+ would be `> 223`, and 2+ would be `> 191`.
+
+Instead, we add 128 to each byte, shifting the range up to make comparison easy. This wraps
+ASCII down into the negative, and puts 4+-Byte Lead at the top:
+
+| Type                 | High Bits  | Binary Range | Signed |
+|----------------------|------------|--------------|-------|
+| 4+-Byte Lead (+ 127) | `0111`     | `01111111`   |   127 |
+|                      |            | `01110000    |   112 |
+|----------------------|------------|--------------|-------|
+| 3-Byte Lead (+ 127)  | `0110`     | `01101111`   |   111 |
+|                      |            | `01100000    |    96 |
+|----------------------|------------|--------------|-------|
+| 2-Byte Lead (+ 127)  | `010`      | `01011111`   |    95 |
+|                      |            | `01000000    |    64 |
+|----------------------|------------|--------------|-------|
+| Continuation (+ 127) | `00`       | `00111111`   |    63 |
+|                      |            | `00000000    |     0 |
+|----------------------|------------|--------------|-------|
+| ASCII (+ 127)        | `1`        | `11111111`   |    -1 |
+|                      |            | `10000000`   |  -128 |
+|----------------------|------------|--------------|-------|
+
+*Now* we can use signed `>` on all of them:
+
+```
+prev1 = input.prev<1>
+prev2 = input.prev<2>
+prev3 = input.prev<3>
+prev1_flipped = input.prev<1>(prev_input) ^ 0x80; // Same as `+ 128`
+prev2_flipped = input.prev<2>(prev_input) ^ 0x80; // Same as `+ 128`
+prev3_flipped = input.prev<3>(prev_input) ^ 0x80; // Same as `+ 128`
+is_second_byte = prev1_flipped > 63;2+-byte lead
+is_third_byte  = prev2_flipped > 95;3+-byte lead
+is_fourth_byte = prev3_flipped > 111; // 4+-byte lead
+```
+
+NOTE: we use `^ 0x80` instead of `+ 128` in the code, which accomplishes the same thing, and even takes the same number
+of cycles as `+`, but on many Intel architectures can be parallelized better (you can do 3
+`^`'s at a time on Haswell, but only 2 `+`'s).
+
+That doesn't look like it saved us any instructions, did it? Well, because we're adding the
+same number to all of them, we can save one of those `+ 128` operations by assembling
+`prev2_flipped` out of prev 1 and prev 3 instead of assembling it from input and adding 128
+to it. One more instruction saved!
+
+```
+prev1 = input.prev<1>
+prev3 = input.prev<3>
+prev1_flipped = prev1 ^ 0x80; // Same as `+ 128`
+prev3_flipped = prev3 ^ 0x80; // Same as `+ 128`
+prev2_flipped = prev1_flipped.concat<2>(prev3_flipped): // <shuffle: take the first 2 bytes from prev1 and the rest from prev3  
+```
+
+####  Bringing It All Together: Detecting the Errors
+
+At this point, we have `is_continuation`, `is_first_byte`, `is_second_byte` and `is_third_byte`.
+All we have left to do is check if they match!
+
+```
+return (is_second_byte | is_third_byte | is_fourth_byte) ^ is_continuation;
+```
+
+But wait--there's more. The above statement is only 3 operations, but they *cannot be done in
+parallel*. You have to do 2 `|`'s and then 1 `&`. Haswell, at least, has 3 ports that can do
+bitwise operations, and we're only using 1!
+
+####  Epilogue: Addition For Booleans
+
+There is one big case the above code doesn't explicitly talk about--what if is_second_byte
+and is_third_byte are BOTH true? That means there is a 3-byte and 2-byte character right next
+to each other (or any combination), and the continuation could be part of either of them!
+Our algorithm using `&` and `|` won't detect that the continuation byte is problematic.
+
+Never fear, though. If that situation occurs, we'll already have detected that the second
+leading byte was an error, because it was supposed to be a part of the preceding multibyte
+character, but it *wasn't a continuation*.
+
+We could stop here, but it turns out that we can fix it using `+` and `-` instead of `|` and
+`&`, which is both interesting and possibly useful (even though we're not using it here). It
+exploits the fact that in SIMD, a *true* value is -1, and a *false* value is 0. So those
+comparisons were giving us numbers!
+
+Given that, if you do `is_second_byte + is_third_byte + is_fourth_byte`, under normal
+circumstances you will either get 0 (0 + 0 + 0) or -1 (-1 + 0 + 0, etc.). Thus,
+`(is_second_byte + is_third_byte + is_fourth_byte) - is_continuation` will yield 0 only if
+*both* or *neither* are 0 (0-0 or -1 - -1). You'll get 1 or -1 if they are different. Because
+*any* nonzero value is treated as an error (not just -1), we're just fine here :)
+
+Further, if *more than one* multibyte character overlaps,
+`is_second_byte + is_third_byte + is_fourth_byte` will be -2 or -3! Subtracting `is_continuation`
+from *that* is guaranteed to give you a nonzero value (-1, -2 or -3). So it'll always be
+considered an error.
+
+One reason you might want to do this is parallelism. ^ and | are not associative, so
+(A | B | C) ^ D will always be three operations in a row: either you do A | B -> | C -> ^ D, or
+you do B | C -> | A -> ^ D. But addition and subtraction *are* associative: (A + B + C) - D can
+be written as `(A + B) + (C - D)`. This means you can do A + B and C - D at the same time, and
+then adds the result together. Same number of operations, but if the processor can run
+independent things in parallel (which most can), it runs faster.
+
+This doesn't help us on Intel, but might help us elsewhere: on Haswell, at least, | and ^ have
+a super nice advantage in that more of them can be run at the same time (they can run on 3
+ports, while + and - can run on 2)! This means that we can do A | B while we're still doing C,
+saving us the cycle we would have earned by using +. Even more, using an instruction with a
+wider array of ports can help *other* code run ahead, too, since these instructions can "get
+out of the way," running on a port other instructions can't.
+
+####  Epilogue II: One More Trick
+
+There's one more relevant trick up our sleeve, it turns out: it turns out on Intel we can "pay
+for" the (prev<1> + 128) instruction, because it can be used to save an instruction in
+check_special_cases()--but we'll talk about that there :)
+
+
+
+
 ## About the Project
 
 ### Bindings and Ports of simdjson
@@ -325,31 +601,6 @@ We distinguish between "bindings" (which just wrap the C++ code) and a port to a
 - `minify mydoc.json` minifies the JSON document, outputting the result to standard output. Minifying means to remove the unneeded white space characters.
 - `jsonpointer mydoc.json <jsonpath> <jsonpath> ... <jsonpath>` parses the document, constructs a model and then processes a series of [JSON Pointer paths](https://tools.ietf.org/html/rfc6901). The result is itself a JSON document.
 
-### In-depth comparisons
-
-If you want to see how a wide range of parsers validate a given JSON file:
-
-```
-make allparserscheckfile
-./allparserscheckfile myfile.json
-```
-
-For performance comparisons:
-
-```
-make parsingcompetition
-./parsingcompetition myfile.json
-```
-
-For broader comparisons:
-
-```
-make allparsingcompetition
-./allparsingcompetition myfile.json
-```
-
-Both the `parsingcompetition` and `allparsingcompetition` tools take a `-t` flag which produces
-a table-oriented output that can be conveniently parsed by other tools.
 
 ### Various References
 

@@ -3,8 +3,8 @@
 #include <cstdint>
 #include <string>
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
-
-  auto ignored = simdjson::build_parsed_json(Data, Size);
-
+  simdjson::dom::parser parser;
+  UNUSED simdjson::dom::element elem;
+  UNUSED auto error = parser.parse(Data, Size).get(elem);
   return 0;
 }

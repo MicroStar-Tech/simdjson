@@ -1,8 +1,8 @@
-[![Build Status](https://cloud.drone.io/api/badges/simdjson/simdjson/status.svg)](https://cloud.drone.io/simdjson/simdjson)
-[![CircleCI](https://circleci.com/gh/simdjson/simdjson.svg?style=svg)](https://circleci.com/gh/simdjson/simdjson)
+[![Build Status](https://cloud.drone.io/api/badges/simdjson/simdjson/status.svg)](https://cloud.drone.io/simdjson/simdjson) 
 [![Fuzzing Status](https://oss-fuzz-build-logs.storage.googleapis.com/badges/simdjson.svg)](https://bugs.chromium.org/p/oss-fuzz/issues/list?sort=-opened&q=proj%3Asimdjson&can=2)
 [![Build status](https://ci.appveyor.com/api/projects/status/ae77wp5v3lebmu6n/branch/master?svg=true)](https://ci.appveyor.com/project/lemire/simdjson-jmmti/branch/master)
-[![][license img]][license]
+[![CirrusCI](https://api.cirrus-ci.com/github/simdjson/simdjson.svg)](https://cirrus-ci.com/github/simdjson/simdjson)
+[![][license img]][license]  [![Doxygen Documentation](https://img.shields.io/badge/docs-doxygen-green.svg)](https://simdjson.org/api/0.3.1/index.html)
 
 simdjson : Parsing gigabytes of JSON per second
 ===============================================
@@ -39,7 +39,7 @@ Quick Start
           
 The simdjson library is easily consumable with a single .h and .cpp file.
 
-0. Prerequisites: `g++` (version 7 or better) or `clang++` (version 6 or better), and a 64-bit system.
+0. Prerequisites: `g++` (version 7 or better) or `clang++` (version 6 or better), and a 64-bit system with a command-line shell (e.g., Linux, macOS, freeBSD). We also support programming environnements like Visual Studio and Xcode, but different steps are needed.
 1. Pull [simdjson.h](singleheader/simdjson.h) and [simdjson.cpp](singleheader/simdjson.cpp) into a directory, along with the sample file [twitter.json](jsonexamples/twitter.json).
    ```
    wget https://raw.githubusercontent.com/simdjson/simdjson/master/singleheader/simdjson.h https://raw.githubusercontent.com/simdjson/simdjson/master/singleheader/simdjson.cpp https://raw.githubusercontent.com/simdjson/simdjson/master/jsonexamples/twitter.json
@@ -54,7 +54,7 @@ The simdjson library is easily consumable with a single .h and .cpp file.
      std::cout << tweets["search_metadata"]["count"] << " results." << std::endl;
    }
    ```
-3. `c++ -o quickstart quickstart.cpp simdjson.cpp -std=c++17`
+3. `c++ -o quickstart quickstart.cpp simdjson.cpp`
 4. `./quickstart`
    ```
    100 results.
@@ -69,20 +69,19 @@ Usage documentation is available:
 * [Performance](doc/performance.md) shows some more advanced scenarios and how to tune for them.
 * [Implementation Selection](doc/implementation-selection.md) describes runtime CPU detection and
   how you can work with it.
-* [API](https://simdjson.org/api/0.3.0/annotated.html) contains the automatically generated API documentation.
+* [API](https://simdjson.org/api/0.3.1/annotated.html) contains the automatically generated API documentation.
 
 Performance results
 -------------------
 
-The simdjson library uses three-quarters less instructions than state-of-the-art parser RapidJSON and
+The simdjson library uses three-quarters less instructions than state-of-the-art parser [RapidJSON](https://rapidjson.org) and
 fifty percent less than sajson. To our knowledge, simdjson is the first fully-validating JSON parser
-to run at gigabytes per second on commodity processors. It can parse millions of JSON documents
-per second on a single core.
+to run at [gigabytes per second](https://en.wikipedia.org/wiki/Gigabyte) (GB/s) on commodity processors. It can parse millions of JSON documents per second on a single core.
 
 The following figure represents parsing speed in GB/s for parsing various files
 on an Intel Skylake processor (3.4 GHz) using the GNU GCC 9 compiler (with the -O3 flag).
 We compare against the best and fastest C++ libraries.
-The simdjson library offers full unicode (UTF-8) validation and exact
+The simdjson library offers full unicode ([UTF-8](https://en.wikipedia.org/wiki/UTF-8)) validation and exact
 number parsing. The RapidJSON library is tested in two modes: fast and
 exact number parsing. The sajson library offers fast (but not exact)
 number parsing and partial unicode validation. In this data set, the file
@@ -167,7 +166,8 @@ For the video inclined, <br />
 Funding
 -------
 
-The work is supported by the Natural Sciences and Engineering Research Council of Canada under grant number RGPIN-2017-03910.
+The work is supported by the Natural Sciences and Engineering Research Council of Canada under grant
+number RGPIN-2017-03910.
 
 [license]: LICENSE
 [license img]: https://img.shields.io/badge/License-Apache%202-blue.svg
@@ -181,6 +181,8 @@ Head over to [CONTRIBUTING.md](CONTRIBUTING.md) for information on contributing 
 License
 -------
 
-This code is made available under the Apache License 2.0.
+This code is made available under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0.html).
 
 Under Windows, we build some tools using the windows/dirent_portable.h file (which is outside our library code): it under the liberal (business-friendly) MIT license.
+
+For compilers that do not support [C++17](https://en.wikipedia.org/wiki/C%2B%2B17), we bundle the string-view library which is published under the Boost license (http://www.boost.org/LICENSE_1_0.txt). Like the Apache license, the Boost license is a permissive license allowing commercial redistribution.

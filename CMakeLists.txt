@@ -1,90 +1,77 @@
 cmake_minimum_required(VERSION 3.9) # CMP0069 NEW
 
-if (NOT CMAKE_BUILD_TYPE)
-  message(STATUS "No build type selected, default to Release")
-  set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build." FORCE)
-endif()
-
 project(simdjson
   DESCRIPTION "Parsing gigabytes of JSON per second"
-  LANGUAGES CXX
+  LANGUAGES CXX C
 )
 
-# LTO seems to create all sorts of fun problems. Let us
-# disable temporarily.
-#include(CheckIPOSupported)
-#check_ipo_supported(RESULT ltoresult)
-#if(ltoresult)
-#  set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
-#endif()
-
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_MACOSX_RPATH OFF)
-set(CMAKE_THREAD_PREFER_PTHREAD ON)
-set(THREADS_PREFER_PTHREAD_FLAG ON)
-
-set(SIMDJSON_LIB_NAME simdjson)
 set(PROJECT_VERSION_MAJOR 0)
-set(PROJECT_VERSION_MINOR 3)
-set(PROJECT_VERSION_PATCH 1)
-set(SIMDJSON_LIB_VERSION "0.3.1" CACHE STRING "simdjson library version")
-set(SIMDJSON_LIB_SOVERSION "1" CACHE STRING "simdjson library soversion")
+set(PROJECT_VERSION_MINOR 4)
+set(PROJECT_VERSION_PATCH 0)
+set(SIMDJSON_LIB_VERSION "0.4.0" CACHE STRING "simdjson library version")
+set(SIMDJSON_LIB_SOVERSION "2" CACHE STRING "simdjson library soversion")
+set(SIMDJSON_GITHUB_REPOSITORY https://github.com/simdjson/simdjson)
 
-option(SIMDJSON_IMPLEMENTATION_HASWELL "Include the haswell implementation" ON)
-option(SIMDJSON_IMPLEMENTATION_WESTMERE "Include the westmere implementation" ON)
-option(SIMDJSON_IMPLEMENTATION_ARM64 "Include the arm64 implementation" ON)
-option(SIMDJSON_IMPLEMENTATION_FALLBACK "Include the fallback implementation" ON)
-if(NOT MSVC)
-  option(SIMDJSON_BUILD_STATIC "Build a static library" OFF) # turning it on disables the production of a dynamic library
-else()
-  option(SIMDJSON_BUILD_STATIC "Build a static library" ON) # turning it on disables the production of a dynamic library
+include(GNUInstallDirs)
+include(cmake/simdjson-flags.cmake)
+include(cmake/simdjson-user-cmakecache.cmake)
+
+if(SIMDJSON_JUST_LIBRARY)
+  MESSAGE( STATUS "Building just the library, omitting all tests, tools and benchmarks." )
 endif()
-option(SIMDJSON_SANITIZE "Sanitize addresses" OFF)
-option(SIMDJSON_GOOGLE_BENCHMARKS "compile the Google Benchmark benchmarks" OFF)
-option(SIMDJSON_ENABLE_THREADS "enable threaded operation" ON)
-option(SIMDJSON_EXCEPTIONS "Enable simdjson's exception-throwing interface" ON)
 
-set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/tools/cmake")
+#
+# Set up test data
+#
+if(NOT(SIMDJSON_JUST_LIBRARY))
+  enable_testing()
+  add_subdirectory(jsonchecker)
+  add_subdirectory(jsonexamples)
+  add_library(test-data INTERFACE)
+  target_link_libraries(test-data INTERFACE jsonchecker-data jsonexamples-data)
+endif()
 
-find_package(CTargets)
-find_package(Options)
-
-# We used to have install(DIRECTORY include/${SIMDJSON_LIB_NAME} DESTINATION include)
-# alone.
-# However, this fails because we also need the root level simdjson.h file.
-install(DIRECTORY include/${SIMDJSON_LIB_NAME} DESTINATION include)
-install(FILES include/${SIMDJSON_LIB_NAME}.h DESTINATION include)
-set (TEST_DATA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/jsonchecker/")
-set (BENCHMARK_DATA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/jsonexamples/")
-add_definitions(-DSIMDJSON_TEST_DATA_DIR="${TEST_DATA_DIR}")
-add_definitions(-DSIMDJSON_BENCHMARK_DATA_DIR="${TEST_DATA_DIR}")
-enable_testing()
-include(include/CMakeLists.txt)
+#
+# Create the top level simdjson library (must be done at this level to use both src/ and include/
+# directories) and tools
+#
+add_subdirectory(include)
 add_subdirectory(src)
-add_subdirectory(tools)
-add_subdirectory(tests)
-add_subdirectory(benchmark)
-
-if (SIMDJSON_GOOGLE_BENCHMARKS)
-  if(NOT EXISTS dependencies/benchmark/CMakeLists.txt)
-    # message(STATUS "Unable to find dependencies/benchmark/CMakeLists.txt")
-    execute_process(COMMAND git submodule update --init -- dependencies/benchmark
-                    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-  endif()
-  option(BENCHMARK_ENABLE_TESTING OFF)
-  set(BENCHMARK_ENABLE_TESTING OFF)
-  option(BENCHMARK_ENABLE_INSTALL OFF)
-  set(BENCHMARK_ENABLE_INSTALL OFF)
-  add_subdirectory(dependencies/benchmark)
+add_subdirectory(windows)
+if(NOT(SIMDJSON_JUST_LIBRARY))
+  add_subdirectory(tools)
+  add_subdirectory(singleheader)
 endif()
 
-# for fuzzing, read the comments in the fuzz/CMakeLists.txt file
-option(ENABLE_FUZZING "enable building the fuzzers" ON)
-if(ENABLE_FUZZING)
+#
+# Compile tools / tests / benchmarks
+#
+if(NOT(SIMDJSON_JUST_LIBRARY))
+  add_subdirectory(dependencies)
+  add_subdirectory(tests)
+  add_subdirectory(examples)
+  add_subdirectory(benchmark)
   add_subdirectory(fuzz)
 endif()
 
+#
+# Source files should be just ASCII
+#
+find_program(FIND find)
+find_program(FILE file)
+find_program(GREP grep)
+if((FIND) AND (FILE) AND (GREP))
+    add_test(
+      NAME "just_ascii"
+      COMMAND sh -c "${FIND}  include src windows tools singleheader tests examples benchmark -path benchmark/checkperf-reference -prune -name '*.h'  -o -name '*.cpp' -type f  -exec ${FILE} '{}' \; |${GREP} -v ASCII || exit 0  && exit 1"
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+endif()
+
+
+#
+# CPack
+#
 set(CPACK_PACKAGE_VENDOR "Daniel Lemire")
 set(CPACK_PACKAGE_CONTACT "lemire@gmail.com")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Parsing gigabytes of JSON per second")
@@ -99,5 +86,3 @@ set(CPACK_RPM_PACKAGE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
 set(CPACK_SOURCE_GENERATOR "TGZ;ZIP")
 
 include(CPack)
-
-

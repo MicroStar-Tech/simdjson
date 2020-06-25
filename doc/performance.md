@@ -9,13 +9,18 @@ are still some scenarios where tuning can enhance performance.
 * [Server Loops: Long-Running Processes and Memory Capacity](#server-loops-long-running-processes-and-memory-capacity)
 * [Large files and huge page support](#large-files-and-huge-page-support)
 * [Computed GOTOs](#computed-gotos)
+* [Number parsing](#number-parsing)
+* [Visual Studio](#visual-studio)
+* [Downclocking](#downclocking)
+
 
 Reusing the parser for maximum efficiency
 -----------------------------------------
 
 If you're using simdjson to parse multiple documents, or in a loop, you should make a parser once
 and reuse it. The simdjson library will allocate and retain internal buffers between parses, keeping
-buffers hot in cache and keeping memory allocation and initialization to a minimum.
+buffers hot in cache and keeping memory allocation and initialization to a minimum. In this manner,
+you can parse terabytes of JSON data without doing any new allocation.
 
 ```c++
 dom::parser parser;
@@ -35,7 +40,7 @@ cout << doc << endl;
 cout << doc2 << endl;
 ```
 
-It's not just internal buffers though. The simdjson library reuses the document itself. dom::element, dom::object and dom::array are *references* to the internal document.
+It's not just internal buffers though. The simdjson library reuses the document itself. The dom::element, dom::object and dom::array instances are *references* to the internal document.
 You are only *borrowing* the document from simdjson, which purposely reuses and overwrites it each
 time you call parse. This prevent wasteful and unnecessary memory allocation in 99% of cases where
 JSON is just read, used, and converted to native values or thrown away.
@@ -61,9 +66,10 @@ without bound:
 * You can set a *max capacity* when constructing a parser:
 
   ```c++
-  dom::parser parser(1024*1024); // Never grow past documents > 1MB
+  dom::parser parser(1000*1000); // Never grow past documents > 1MB
   for (web_request request : listen()) {
-    auto [doc, error] = parser.parse(request.body);
+    dom::element doc;
+    auto error = parser.parse(request.body).get(doc);
     // If the document was above our limit, emit 413 = payload too large
     if (error == CAPACITY) { request.respond(413); continue; }
     // ...
@@ -77,11 +83,12 @@ without bound:
 
   ```c++
   dom::parser parser(0); // This parser will refuse to automatically grow capacity
-  simdjson::error_code allocate_error = parser.allocate(1024*1024); // This allocates enough capacity to handle documents <= 1MB
-  if (allocate_error) { cerr << allocate_error << endl; exit(1); }
+  auto error = parser.allocate(1000*1000); // This allocates enough capacity to handle documents <= 1MB
+  if (error) { cerr << error << endl; exit(1); }
 
   for (web_request request : listen()) {
-    auto [doc, error] = parser.parse(request.body);
+    dom::element doc;
+    error = parser.parse(request.body).get(doc);
     // If the document was above our limit, emit 413 = payload too large
     if (error == CAPACITY) { request.respond(413); continue; }
     // ...
@@ -140,3 +147,33 @@ few hundred megabytes per second if your JSON documents are densely packed with 
 - When possible, you should favor integer values written without a decimal point, as it simpler and faster to parse decimal integer values.
 - When serializing numbers, you should not use more digits than necessary: 17 digits is all that is needed to exactly represent double-precision floating-point numbers. Using many more digits than necessary will make your files larger and slower to parse.
 - When benchmarking parsing speeds, always report whether your JSON documents are made mostly of floating-point numbers when it is the case, since number parsing can then dominate the parsing time.
+
+
+Visual Studio
+--------------
+
+On Intel and AMD Windows platforms, Microsoft Visual Studio enables programmers to build either 32-bit (x86) or 64-bit (x64) binaries. We urge you to always use 64-bit mode. Visual Studio 2019 should default on 64-bit builds when you have a 64-bit version of Windows, which we recommend.
+
+We do not recommend that you compile simdjson with architecture-specific flags such as  `arch:AVX2`. The simdjson library automatically selects the best execution kernel at runtime.
+
+Recent versions of Microsoft Visual Studio on Windows provides support for the LLVM Clang compiler. You  only need to install the "Clang compiler" optional component. You may also get a copy of the 64-bit LLVM CLang compiler for [Windows directly from LLVM](https://releases.llvm.org/download.html). The simdjson library fully supports the LLVM Clang compiler under Windows. In fact, you may get better performance out of simdjson with the LLVM Clang compiler than with the regular Visual Studio compiler.
+
+
+Downclocking
+--------------
+
+You should not expect the simdjson library to cause downclocking of your recent Intel CPU cores.
+
+On some Intel processors, using SIMD instructions in a sustained manner on the same CPU core may result in a phenomenon called downclocking whereas the processor initially runs these instructions at a slow speed before reducing the frequency of the core for a short time (milliseconds). Intel refers to these states as licenses. On some current Intel processors, it occurs under two scenarios:
+
+- [Whenever 512-bit AVX-512 instructions are used](https://lemire.me/blog/2018/09/07/avx-512-when-and-how-to-use-these-new-instructions/).
+- Whenever heavy 256-bit or wider instructions are used. Heavy instructions are those involving floating point operations or integer multiplications (since these execute on the floating point unit).
+
+The simdjson library does not currently support AVX-512 instructions and it does not make use of heavy 256-bit instructions. Thus there should be no downclocking due to simdjson on recent processors. You may still be worried about which SIMD instruction set is used by simdjson.  Thankfully,  [you can always determine and change which architecture-specific implementation is used](implementation-selection.md). Thus even if your CPU supports AVX2, you do not need to use AVX2. You are in control.
+
+
+Further Reading
+-------------
+
+* [Implementation Selection](doc/implementation-selection.md) describes runtime CPU detection and
+  how you can work with it.

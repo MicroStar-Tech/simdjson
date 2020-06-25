@@ -30,14 +30,15 @@ cmake .. \
 -DCMAKE_BUILD_TYPE=Debug \
 -DSIMDJSON_BUILD_STATIC=On \
 -DENABLE_FUZZING=On \
+-DSIMDJSON_COMPETITION=Off \
 -DSIMDJSON_FUZZ_LINKMAIN=Off \
 -DSIMDJSON_FUZZ_LDFLAGS=$LIB_FUZZING_ENGINE
 
-cmake --build .
+cmake --build . --target all_fuzzers
 
 cp fuzz/fuzz_* $OUT
 
 # all corpora are equal, they all take json as input
-for f in $OUT/fuzz* ; do
+for f in $(ls $OUT/fuzz* |grep -v '.zip$') ; do
    cp ../corpus.zip $OUT/$(basename $f).zip
 done
