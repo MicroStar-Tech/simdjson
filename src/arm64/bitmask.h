@@ -1,11 +1,7 @@
 #ifndef SIMDJSON_ARM64_BITMASK_H
 #define SIMDJSON_ARM64_BITMASK_H
 
-#include "simdjson.h"
-
-#include "arm64/intrinsics.h"
-
-namespace simdjson {
+namespace {
 namespace arm64 {
 
 //
@@ -13,7 +9,7 @@ namespace arm64 {
 //
 // For example, prefix_xor(00100100) == 00011100
 //
-really_inline uint64_t prefix_xor(uint64_t bitmask) {
+simdjson_really_inline uint64_t prefix_xor(uint64_t bitmask) {
   /////////////
   // We could do this with PMULL, but it is apparently slow.
   //  
@@ -38,6 +34,6 @@ really_inline uint64_t prefix_xor(uint64_t bitmask) {
 
 } // namespace arm64
 } // namespace simdjson
-UNTARGET_REGION
+SIMDJSON_UNTARGET_REGION
 
 #endif

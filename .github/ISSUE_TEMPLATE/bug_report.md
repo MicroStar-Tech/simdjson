@@ -2,7 +2,7 @@
 name: Bug report
 about: Create a report to help us improve
 title: ''
-labels: bug
+labels: bug (unverified)
 assignees: ''
 
 ---
@@ -17,14 +17,21 @@ Before submitting an issue, please ensure that you have read the documentation:
 **Describe the bug**
 A clear and concise description of what the bug is.
 
+Note that a compiler warning is not a bug. 
+
 **To Reproduce**
 Steps to reproduce the behaviour: provide a code sample if possible.
+
+If we cannot reproduce the issue, then we cannot address it.
+
+Note that a stack trace from your own program is not enough.
 
 **Configuration (please complete the following information if relevant):**
  - OS: [e.g. Ubuntu 16.04.6 LTS]
  - Compiler [e.g. Apple clang version 11.0.3 (clang-1103.0.32.59) x86_64-apple-darwin19.4.0]
  - Version [e.g. 22]
 
+We support up-to-date 64-bit ARM and x64 FreeBSD, macOS, Windows and Linux systems. Please ensure that your configuration is supported before labelling the issue as a bug. In particular, we do not support legacy 32-bit systems. 
 
 **Indicate whether you are willing or able to provide a bug fix as a pull request**
 

@@ -1,13 +1,10 @@
-#include "simdjson.h"
-#include "arm64/implementation.h"
+#include "arm64/begin_implementation.h"
 #include "arm64/dom_parser_implementation.h"
 
-TARGET_HASWELL
+namespace {
+namespace SIMDJSON_IMPLEMENTATION {
 
-namespace simdjson {
-namespace arm64 {
-
-WARN_UNUSED error_code implementation::create_dom_parser_implementation(
+SIMDJSON_WARN_UNUSED error_code implementation::create_dom_parser_implementation(
   size_t capacity,
   size_t max_depth,
   std::unique_ptr<internal::dom_parser_implementation>& dst
@@ -19,7 +16,7 @@ WARN_UNUSED error_code implementation::create_dom_parser_implementation(
   return SUCCESS;
 }
 
-} // namespace arm64
-} // namespace simdjson
+} // namespace SIMDJSON_IMPLEMENTATION
+} // unnamed namespace
 
-UNTARGET_REGION
+#include "arm64/end_implementation.h"

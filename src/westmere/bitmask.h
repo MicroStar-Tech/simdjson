@@ -1,19 +1,15 @@
 #ifndef SIMDJSON_WESTMERE_BITMASK_H
 #define SIMDJSON_WESTMERE_BITMASK_H
 
-#include "simdjson.h"
-#include "westmere/intrinsics.h"
-
-TARGET_WESTMERE
-namespace simdjson {
-namespace westmere {
+namespace {
+namespace SIMDJSON_IMPLEMENTATION {
 
 //
 // Perform a "cumulative bitwise xor," flipping bits each time a 1 is encountered.
 //
 // For example, prefix_xor(00100100) == 00011100
 //
-really_inline uint64_t prefix_xor(const uint64_t bitmask) {
+simdjson_really_inline uint64_t prefix_xor(const uint64_t bitmask) {
   // There should be no such thing with a processing supporting avx2
   // but not clmul.
   __m128i all_ones = _mm_set1_epi8('\xFF');
@@ -21,9 +17,7 @@ really_inline uint64_t prefix_xor(const uint64_t bitmask) {
   return _mm_cvtsi128_si64(result);
 }
 
-} // namespace westmere
-
-} // namespace simdjson
-UNTARGET_REGION
+} // namespace SIMDJSON_IMPLEMENTATION
+} // unnamed namespace
 
 #endif // SIMDJSON_WESTMERE_BITMASK_H

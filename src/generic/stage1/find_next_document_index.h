@@ -1,3 +1,6 @@
+namespace {
+namespace SIMDJSON_IMPLEMENTATION {
+
 /**
   * This algorithm is used to quickly identify the last structural position that
   * makes up a complete document.
@@ -23,7 +26,7 @@
   * complete document, therefore the last json buffer location is the end of the
   * batch.
   */
-really_inline static uint32_t find_next_document_index(dom_parser_implementation &parser) {
+simdjson_really_inline uint32_t find_next_document_index(dom_parser_implementation &parser) {
   // TODO don't count separately, just figure out depth
   auto arr_cnt = 0;
   auto obj_cnt = 0;
@@ -64,23 +67,5 @@ really_inline static uint32_t find_next_document_index(dom_parser_implementation
   return 0;
 }
 
-// Skip the last character if it is partial
-really_inline static size_t trim_partial_utf8(const uint8_t *buf, size_t len) {
-  if (unlikely(len < 3)) {
-    switch (len) {
-      case 2:
-        if (buf[len-1] >= 0b11000000) { return len-1; } // 2-, 3- and 4-byte characters with only 1 byte left
-        if (buf[len-2] >= 0b11100000) { return len-2; } // 3- and 4-byte characters with only 2 bytes left
-        return len;
-      case 1:
-        if (buf[len-1] >= 0b11000000) { return len-1; } // 2-, 3- and 4-byte characters with only 1 byte left
-        return len;
-      case 0:
-        return len;
-    }
-  }
-  if (buf[len-1] >= 0b11000000) { return len-1; } // 2-, 3- and 4-byte characters with only 1 byte left
-  if (buf[len-2] >= 0b11100000) { return len-2; } // 3- and 4-byte characters with only 1 byte left
-  if (buf[len-3] >= 0b11110000) { return len-3; } // 4-byte characters with only 3 bytes left
-  return len;
-}
+} // namespace SIMDJSON_IMPLEMENTATION
+} // unnamed namespace

@@ -1,8 +1,9 @@
-[![Build Status](https://cloud.drone.io/api/badges/simdjson/simdjson/status.svg)](https://cloud.drone.io/simdjson/simdjson) 
 [![Fuzzing Status](https://oss-fuzz-build-logs.storage.googleapis.com/badges/simdjson.svg)](https://bugs.chromium.org/p/oss-fuzz/issues/list?sort=-opened&q=proj%3Asimdjson&can=2)
-[![Build status](https://ci.appveyor.com/api/projects/status/ae77wp5v3lebmu6n/branch/master?svg=true)](https://ci.appveyor.com/project/lemire/simdjson-jmmti/branch/master)
-[![CirrusCI](https://api.cirrus-ci.com/github/simdjson/simdjson.svg)](https://cirrus-ci.com/github/simdjson/simdjson)
-[![][license img]][license]  [![Doxygen Documentation](https://img.shields.io/badge/docs-doxygen-green.svg)](https://simdjson.org/api/0.3.1/index.html)
+![Ubuntu 18.04 CI](https://github.com/simdjson/simdjson/workflows/Ubuntu%2018.04%20CI%20(GCC%207)/badge.svg)
+[![Ubuntu 20.04 CI](https://github.com/simdjson/simdjson/workflows/Ubuntu%2020.04%20CI%20(GCC%209)/badge.svg)](https://simdjson.org/plots.html)
+![VS16-CI](https://github.com/simdjson/simdjson/workflows/VS16-CI/badge.svg)
+![MinGW64-CI](https://github.com/simdjson/simdjson/workflows/MinGW64-CI/badge.svg)
+[![][license img]][license]  [![Doxygen Documentation](https://img.shields.io/badge/docs-doxygen-green.svg)](https://simdjson.org/api/0.5.0/index.html)
 
 simdjson : Parsing gigabytes of JSON per second
 ===============================================
@@ -69,7 +70,7 @@ Usage documentation is available:
 * [Performance](doc/performance.md) shows some more advanced scenarios and how to tune for them.
 * [Implementation Selection](doc/implementation-selection.md) describes runtime CPU detection and
   how you can work with it.
-* [API](https://simdjson.org/api/0.3.1/annotated.html) contains the automatically generated API documentation.
+* [API](https://simdjson.org/api/0.5.0/annotated.html) contains the automatically generated API documentation.
 
 Performance results
 -------------------
@@ -127,6 +128,7 @@ Real-world usage
 - [Microsoft FishStore](https://github.com/microsoft/FishStore)
 - [Yandex ClickHouse](https://github.com/yandex/ClickHouse)
 - [Clang Build Analyzer](https://github.com/aras-p/ClangBuildAnalyzer)
+- [Shopify HeapProfiler](https://github.com/Shopify/heap-profiler)
 
 If you are planning to use simdjson in a product, please work from one of our releases.
 
@@ -136,6 +138,7 @@ Bindings and Ports of simdjson
 We distinguish between "bindings" (which just wrap the C++ code) and a port to another programming language (which reimplements everything).
 
 - [ZippyJSON](https://github.com/michaeleisel/zippyjson): Swift bindings for the simdjson project.
+- [libpy_simdjson](https://github.com/gerrymanoim/libpy_simdjson/): high-speed Python bindings for simdjson using [libpy](https://github.com/quantopian/libpy).
 - [pysimdjson](https://github.com/TkTech/pysimdjson): Python bindings for the simdjson project.
 - [simdjson-rs](https://github.com/simd-lite): Rust port.
 - [simdjson-rust](https://github.com/SunDoge/simdjson-rust): Rust wrapper (bindings).
@@ -143,6 +146,7 @@ We distinguish between "bindings" (which just wrap the C++ code) and a port to a
 - [simdjson_nodejs](https://github.com/luizperes/simdjson_nodejs): Node.js bindings for the simdjson project.
 - [simdjson_php](https://github.com/crazyxman/simdjson_php): PHP bindings for the simdjson project.
 - [simdjson_ruby](https://github.com/saka1/simdjson_ruby): Ruby bindings for the simdjson project.
+- [fast_jsonparser](https://github.com/anilmaurya/fast_jsonparser): Ruby bindings for the simdjson project.
 - [simdjson-go](https://github.com/minio/simdjson-go): Go port using Golang assembly.
 - [rcppsimdjson](https://github.com/eddelbuettel/rcppsimdjson): R bindings.
 

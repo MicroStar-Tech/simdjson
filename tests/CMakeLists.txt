@@ -52,19 +52,25 @@ target_compile_definitions(stringparsingcheck PRIVATE NOMINMAX)
 # All remaining tests link with simdjson proper
 link_libraries(simdjson)
 add_cpp_test(basictests LABELS acceptance per_implementation)
+add_cpp_test(document_stream_tests LABELS acceptance per_implementation)
+add_cpp_test(document_tests LABELS acceptance per_implementation)
 add_cpp_test(errortests LABELS acceptance per_implementation)
 add_cpp_test(integer_tests LABELS acceptance per_implementation)
 add_cpp_test(jsoncheck LABELS acceptance per_implementation)
+add_cpp_test(minefieldcheck LABELS acceptance per_implementation)
 add_cpp_test(parse_many_test LABELS acceptance per_implementation)
-add_cpp_test(pointercheck LABELS acceptance per_implementation)
+add_cpp_test(pointercheck LABELS acceptance per_implementation) # https://tools.ietf.org/html/rfc6901
 add_cpp_test(extracting_values_example LABELS acceptance per_implementation)
 add_cpp_test(unicode_tests LABELS acceptance per_implementation)
 
 find_program(BASH bash)
 
+# Below we skip anything on Windows, not just visual studio, because running bash under Windows requires you to 
+# map app paths to their "mounted" equivalent (e.g., /mnt/c/...). So even if you have bash under Windows, extra work would be
+# required to make things work robustly. Simply put: bash is not quite portable.
 
 # Script tests
-if (BASH AND (NOT MSVC)) # The scripts are not robust enough to run under Windows even if bash is available
+if (BASH AND (NOT WIN32) AND SIMDJSON_BASH AND (TARGET json2json)) # The scripts are not robust enough to run under Windows even if bash is available
   #
   # json2json test
   #
@@ -173,5 +179,21 @@ endif()
 # add_executable(singleheader ./singleheadertest.cpp ${PROJECT_SOURCE_DIR}/singleheader/simdjson.cpp)
 # target_link_libraries(singleheader simdjson simdjson-flags)
 # add_test(singleheader singleheader)
+
+if(NOT MSVC)
+  ######
+  # This tests is to guard us against ever again removing the soversion
+  # number from the library. See Bug
+  # https://github.com/simdjson/simdjson/issues/1014
+  #####
+  get_target_property(REPORTED_SIMDJSON_SOVERSION simdjson SOVERSION)
+  if(NOT ${REPORTED_SIMDJSON_SOVERSION} STREQUAL ${SIMDJSON_LIB_SOVERSION})
+    message(FATAL_ERROR "The library target does not have the proper soversion information." )
+  endif()
+  get_target_property(REPORTED_SIMDJSON_VERSION simdjson VERSION)
+  if(NOT ${REPORTED_SIMDJSON_VERSION} STREQUAL ${SIMDJSON_LIB_VERSION})
+    message(FATAL_ERROR "The library target does not have the proper version information." )
+  endif()
+endif()
 
 add_subdirectory(compilation_failure_tests)
