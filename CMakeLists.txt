@@ -6,18 +6,21 @@ project(simdjson
 )
 
 set(PROJECT_VERSION_MAJOR 0)
-set(PROJECT_VERSION_MINOR 4)
+set(PROJECT_VERSION_MINOR 5)
 set(PROJECT_VERSION_PATCH 0)
-set(SIMDJSON_LIB_VERSION "0.4.0" CACHE STRING "simdjson library version")
-set(SIMDJSON_LIB_SOVERSION "2" CACHE STRING "simdjson library soversion")
+set(SIMDJSON_SEMANTIC_VERSION "0.5.0" CACHE STRING "simdjson semantic version")
+set(SIMDJSON_LIB_VERSION "3.0.0" CACHE STRING "simdjson library version")
+set(SIMDJSON_LIB_SOVERSION "3" CACHE STRING "simdjson library soversion")
 set(SIMDJSON_GITHUB_REPOSITORY https://github.com/simdjson/simdjson)
 
 include(GNUInstallDirs)
 include(cmake/simdjson-flags.cmake)
 include(cmake/simdjson-user-cmakecache.cmake)
 
+
+
 if(SIMDJSON_JUST_LIBRARY)
-  MESSAGE( STATUS "Building just the library, omitting all tests, tools and benchmarks." )
+  message( STATUS "Building just the library, omitting all tests, tools and benchmarks." )
 endif()
 
 #
@@ -28,7 +31,7 @@ if(NOT(SIMDJSON_JUST_LIBRARY))
   add_subdirectory(jsonchecker)
   add_subdirectory(jsonexamples)
   add_library(test-data INTERFACE)
-  target_link_libraries(test-data INTERFACE jsonchecker-data jsonexamples-data)
+  target_link_libraries(test-data INTERFACE jsonchecker-data jsonchecker-minefield-data jsonexamples-data)
 endif()
 
 #
@@ -39,15 +42,16 @@ add_subdirectory(include)
 add_subdirectory(src)
 add_subdirectory(windows)
 if(NOT(SIMDJSON_JUST_LIBRARY))
-  add_subdirectory(tools)
+  add_subdirectory(dependencies) ## This needs to be before tools because of cxxopts
+  add_subdirectory(tools)  ## This needs to be before tests because of cxxopts
   add_subdirectory(singleheader)
 endif()
+install(FILES singleheader/simdjson.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 #
 # Compile tools / tests / benchmarks
 #
 if(NOT(SIMDJSON_JUST_LIBRARY))
-  add_subdirectory(dependencies)
   add_subdirectory(tests)
   add_subdirectory(examples)
   add_subdirectory(benchmark)

@@ -8,7 +8,8 @@ An overview of what you need to know to use simdjson, with examples.
 * [Using simdjson as a CMake dependency](#using-simdjson-as-a-cmake-dependency)
 * [The Basics: Loading and Parsing JSON Documents](#the-basics-loading-and-parsing-json-documents)
 * [Using the Parsed JSON](#using-the-parsed-json)
-* [C++17 Support](#c++17-support)
+* [C++11 Support and string_view](#c11-support-and-string_view)
+* [C++17 Support](#c17-support)
 * [Minifying JSON strings without parsing](#minifying-json-strings-without-parsing)
 * [UTF-8 validation (alone)](#utf-8-validation-alone)
 * [JSON Pointer](#json-pointer)
@@ -18,13 +19,14 @@ An overview of what you need to know to use simdjson, with examples.
 * [Tree Walking and JSON Element Types](#tree-walking-and-json-element-types)
 * [Newline-Delimited JSON (ndjson) and JSON lines](#newline-delimited-json-ndjson-and-json-lines)
 * [Thread Safety](#thread-safety)
+* [Standard Compliance](#standard-compliance)
 
 
 Requirements
 ------------------
 
-- A recent compiler (LLVM clang6 or better, GNU GCC 7 or better) on a 64-bit (ARM or x64 Intel/AMD) POSIX systems such as macOS, freeBSD or Linux. We require that the compiler supports the C++11 standard or better.
-- Visual Studio 2017 or better under 64-bit Windows. Users should target a 64-bit build (x64) instead of a 32-bit build (x86). We support the LLVM clang compiler under Visual Studio (clangcl) as well as as the regular Visual Studio compiler.
+- A recent compiler (LLVM clang6 or better, GNU GCC 7.4 or better) on a 64-bit (ARM or x64 Intel/AMD) POSIX systems such as macOS, freeBSD or Linux. We require that the compiler supports the C++11 standard or better.
+- Visual Studio 2017 or better under 64-bit Windows. Users should target a 64-bit build (x64) instead of a 32-bit build (x86). We support the LLVM clang compiler under Visual Studio (clangcl) as well as as the regular Visual Studio compiler. We also support MinGW 64-bit under Windows.
 
 Including simdjson
 ------------------
@@ -44,28 +46,51 @@ c++ myproject.cpp simdjson.cpp
 ```
 
 Note:
-- Users on macOS and other platforms were default compilers do not provide C++11 compliant by default should request it with the appropriate flag (e.g., `c++ myproject.cpp simdjson.cpp`).
+- Users on macOS and other platforms were default compilers do not provide C++11 compliant by default should request it with the appropriate flag (e.g., `c++ -std=c++17 myproject.cpp simdjson.cpp`).
 - Visual Studio users should compile with the `_CRT_SECURE_NO_WARNINGS` flag to avoid warnings with respect to our use of standard C functions such as `fopen`.
+
+
+Using simdjson with package managers
+------------------
+
+You can install the simdjson library on your system or in your project using multiple package managers such as  MSYS2, the conan package manager, vcpkg, brew, the apt package manager (debian-based Linux systems), the FreeBSD package manager (FreeBSD), and so on. [Visit our wiki for more details](https://github.com/simdjson/simdjson/wiki/Installing-simdjson-with-a-package-manager).
 
 Using simdjson as a CMake dependency
 ------------------
 
-You can include the  simdjson repository as a folder in your CMake project. In the parent
-`CMakeLists.txt`, include the following lines:
+You can include the  simdjson as a CMake dependency by including the following lines in your `CMakeLists.txt`:
 
+```cmake
+include(FetchContent)
+
+FetchContent_Declare(
+  simdjson
+  GIT_REPOSITORY https://github.com/simdjson/simdjson.git
+  GIT_TAG  v0.5.0
+  GIT_SHALLOW TRUE)
+
+set(SIMDJSON_JUST_LIBRARY ON CACHE INTERNAL "")
+set(SIMDJSON_BUILD_STATIC ON CACHE INTERNAL "")
+
+FetchContent_MakeAvailable(simdjson)
 ```
-set(SIMDJSON_JUST_LIBRARY ON CACHE STRING "Build just the library, nothing else." FORCE)
-add_subdirectory(simdjson EXCLUDE_FROM_ALL)
-```
+
+You should replace `GIT_TAG  v0.5.0` by the version you need. If you omit `GIT_TAG  v0.5.0`, you will work from the main branch of simdjson: we recommend that if you are working on production code, 
 
 Elsewhere in your project, you can  declare dependencies on simdjson with lines such as these:
 
-```
+```cmake
 add_executable(myprogram myprogram.cpp)
 target_link_libraries(myprogram simdjson)
 ```
 
-See [our CMake demonstration](https://github.com/simdjson/cmakedemo).
+We recommend CMake version 3.15 or better.
+
+See [our CMake demonstration](https://github.com/simdjson/cmake_demo_single_file). It works under Linux, FreeBSD, macOS and Windows (including Visual Studio).
+
+
+
+The CMake build in simdjson can be taylored with a few variables. You can see the available variables and their default values by entering the `cmake -LA` command.
 
 The Basics: Loading and Parsing JSON Documents
 ----------------------------------------------
@@ -90,7 +115,7 @@ The parsed document resulting from the `parser.load` and `parser.parse` calls de
 
 During the`load` or `parse` calls, neither the input file nor the input string are ever modified. After calling `load` or `parse`, the source (either a file or a string) can be safely discarded. All of the JSON data is stored in the `parser` instance.  The parsed document is also immutable in simdjson: you do not modify it by accessing it.
 
-For best performance, a `parser` instance should be reused over several files: otherwise you will needlessly reallocate memory, an expensive process. It is also possible to avoid entirely memory allocations during parsing when using simdjson. [See our performance notes for details](https://github.com/simdjson/simdjson/blob/master/doc/performance.md).
+For best performance, a `parser` instance should be reused over several files: otherwise you will needlessly reallocate memory, an expensive process. It is also possible to avoid entirely memory allocations during parsing when using simdjson. [See our performance notes for details](performance.md).
 
 
 Using the Parsed JSON
@@ -192,6 +217,27 @@ And another one:
   cout << "number: " << v << endl;
 ```
 
+
+C++11 Support and string_view
+-------------
+
+The simdjson library builds on compilers supporting the [C++11 standard](https://en.wikipedia.org/wiki/C%2B%2B11). It is also a strict requirement: we have no plan to support older C++ compilers.
+
+We represent parsed strings in simdjson using the `std::string_view` class. It avoids
+the need to copy the data, as would be necessary with the `std::string` class. It also
+avoids the pitfalls of null-terminated C strings.
+
+The `std::string_view` class has become standard as part of C++17 but it is not always available
+on compilers which only supports C++11. When we detect that `string_view` is natively
+available, we define the macro `SIMDJSON_HAS_STRING_VIEW`.
+
+When we detect that it is unavailable,
+we use [string-view-lite](https://github.com/martinmoene/string-view-lite) as a
+substitute. In such cases, we use the type alias `using string_view = nonstd::string_view;` to  
+offer the same API, irrespective of the compiler and standard library. The macro
+`SIMDJSON_HAS_STRING_VIEW` will be *undefined* to indicate that we emulate `string_view`.
+
+
 C++17 Support
 -------------
 
@@ -216,7 +262,7 @@ padded_string json = R"(  { "foo": 1, "bar": 2 }  )"_padded;
 dom::parser parser;
 dom::object object;
 auto error = parser.parse(json).get(object);
-if (!error) { cerr << error << endl; return; }
+if (error) { cerr << error << endl; return; }
 for (dom::key_value_pair field : object) {
   cout << field.key << " = " << field.value << endl;
 }
@@ -262,7 +308,7 @@ JSON Pointer
 ------------
 
 The simdjson library also supports [JSON pointer](https://tools.ietf.org/html/rfc6901) through the
-at() method, letting you reach further down into the document in a single call:
+`at_pointer()` method, letting you reach further down into the document in a single call:
 
 ```c++
 auto cars_json = R"( [
@@ -272,8 +318,38 @@ auto cars_json = R"( [
 ] )"_padded;
 dom::parser parser;
 dom::element cars = parser.parse(cars_json);
-cout << cars.at("0/tire_pressure/1") << endl; // Prints 39.9
+cout << cars.at_pointer("/0/tire_pressure/1") << endl; // Prints 39.9
 ```
+
+A JSON Path is a sequence of segments each starting with the '/' character. Within arrays, an integer
+index allows you to select the indexed node. Within objects, the string value of the key allows you to
+select the value. If your keys contain the characters '/' or '~', they must be escaped as '~1' and
+'~0' respectively. An empty JSON Path refers to the whole document.
+
+We also extend the JSON Pointer support to include *relative* paths.  
+You can apply a JSON path to any node and the path gets interpreted relatively, as if the currrent node were a whole JSON document.
+
+Consider the following example: 
+
+```c++
+auto cars_json = R"( [
+  { "make": "Toyota", "model": "Camry",  "year": 2018, "tire_pressure": [ 40.1, 39.9, 37.7, 40.4 ] },
+  { "make": "Kia",    "model": "Soul",   "year": 2012, "tire_pressure": [ 30.1, 31.0, 28.6, 28.7 ] },
+  { "make": "Toyota", "model": "Tercel", "year": 1999, "tire_pressure": [ 29.8, 30.0, 30.2, 30.5 ] }
+] )"_padded;
+dom::parser parser;
+dom::element cars = parser.parse(cars_json);
+cout << cars.at_pointer("/0/tire_pressure/1") << endl; // Prints 39.9
+for (dom::element car_element : cars) {
+    dom::object car;
+    simdjson::error_code error;
+    if ((error = car_element.get(car))) { std::cerr << error << std::endl; return; }
+    double x = car.at_pointer("/tire_pressure/1");
+    cout << x << endl; // Prints 39.9, 31 and 30
+}
+```
+
+
 
 Error Handling
 --------------
@@ -534,7 +610,7 @@ Thread Safety
 
 We built simdjson with thread safety in mind.
 
-The simdjson library is single-threaded except for  [`parse_many`](https://github.com/simdjson/simdjson/blob/master/doc/parse_many.md) which may use secondary threads under its control when the library is compiled with thread support.
+The simdjson library is single-threaded except for  [`parse_many`](parse_many.md) which may use secondary threads under its control when the library is compiled with thread support.
 
 
 We recommend using one `dom::parser` object per thread in which case the library is thread-safe.
@@ -544,18 +620,28 @@ The parsed results (`dom::document`, `dom::element`, `array`, `object`) depend o
 The CPU detection, which runs the first time parsing is attempted and switches to the fastest
 parser for your CPU, is transparent and thread-safe.
 
+
+Standard Compliance
+--------------------
+
+The simdjson library is fully compliant with  the [RFC 8259](https://www.tbray.org/ongoing/When/201x/2017/12/14/rfc8259.html) JSON specification.
+
+- The only insignificant whitespace characters allowed are the space, the horizontal tab, the line feed and the carriage return. In particular, a JSON document may not contain an unespaced null character.
+- A single string or a single number is considered to be a valid JSON document.
+- We fully validate the numbers according to the JSON specification. For example,  the string `01` is not valid JSON document since the specification states that *leading zeros are not allowed*.
+- The specification allows implementations to set limits on the range and precision of numbers accepted.  We support 64-bit floating-point numbers as well as integer values. 
+  - We parse integers and floating-point numbers as separate types which allows us to support all signed (two complement's) 64-bit integers, like a Java `long` or a C/C++ `long long` and all 64-bit unsigned integers. When we cannot represent exactly an integer as a signed or unsigned 64-bit value, we reject the JSON document. 
+  - We support the full range of 64-bit floating-point numbers (binary64). The values range from `std::numeric_limits<double>::lowest()`  to `std::numeric_limits<double>::max()`, so from -1.7976e308 all the way to 1.7975e308. Extreme values (less or equal to -1e308, greater or equal to 1e308) are rejected: we refuse to parse the input document. Numbers are parsed with with a perfect accuracy (ULP 0): the nearest floating-point value is chosen, rounding to even when needed. If you serialized your floating-point numbers with 17 significant digits in a standard compliant manner, the simdjson library is guaranteed to recovere the example same numbers, exactly.
+- The specification states that JSON text exchanged between systems that are not part of a closed ecosystem MUST be encoded using UTF-8. The simdjson library does full UTF-8 validation as part of the parsing. The specification states that implementations MUST NOT add a byte order mark: the simdjson library rejects documents starting with a  byte order mark.
+- The simdjson library validates string content for unescaped characters. Unescaped line breaks and tabs in strings are not allowed.
+- The simdjson library accepts objects with repeated keys: all of the name/value pairs, including duplicates, are reported. We do not enforce key uniqueness.
+- The specification states that an implementation may set limits on the size of texts that it accepts. The simdjson library limits single JSON documents to 4 GiB. It will refuse to parse a JSON document larger than 4294967295 bytes. (This limitation does not apply to streams of JSON documents, only to single JSON documents.)
+- The specification states that an implementation may set limits on the maximum depth of nesting. By default, the simdjson will refuse to parse documents with a depth exceeding 1024.
+
+
 Backwards Compatibility
 -----------------------
 
 The only header file supported by simdjson is `simdjson.h`. Older versions of simdjson published a
 number of other include files such as `document.h` or `ParsedJson.h` alongside `simdjson.h`; these headers
 may be moved or removed in future versions.
-
-
-
-Further Reading
--------------
-
-* [Performance](doc/performance.md) shows some more advanced scenarios and how to tune for them.
-* [Implementation Selection](doc/implementation-selection.md) describes runtime CPU detection and
-  how you can work with it.

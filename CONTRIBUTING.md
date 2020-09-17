@@ -41,6 +41,7 @@ We have few hard rules, but we have some:
 - Printing to standard output or standard error (`stderr`, `stdout`, `std::cerr`, `std::cout`) in the core library is forbidden. This follows from the [Writing R Extensions](https://cran.r-project.org/doc/manuals/R-exts.html) manual which states that "Compiled code should not write to stdout or stderr".
 - Calls to `abort()` are forbidden in the core library. This follows from the [Writing R Extensions](https://cran.r-project.org/doc/manuals/R-exts.html) manual which states that "Under no circumstances should your compiled code ever call abort or exit".
 - All source code files (.h, .cpp) must be ASCII.
+- All C macros introduced in public headers need to be prefixed with either `SIMDJSON_` or `simdjson_`.
 
 Tools, tests and benchmarks are not held to these same strict rules.
 
@@ -70,6 +71,12 @@ Pull requests are always invited. However, we ask that you follow these guidelin
 - Your code should pass our continuous-integration tests. It is your responsability to ensure that your proposal pass the tests. We do not merge pull requests that would break our build.
 
 If the benefits of your proposed code remain unclear, we may choose to discard your code: that is not an insult, we frequently discard our own code. We may also consider various alternatives and choose another path. Again, that is not an insult or a sign that you have wasted your time.
+
+Style
+-----
+
+Our formatting style is inspired by the LLVM style.
+The simdjson library is written using the snake case: when a variable or a function is a phrase,  each space is replaced by an underscore character, and the first letter of each word written in lowercase.  Compile-time constants are written entirely in uppercase with the same underscore convention.
 
 Code of Conduct
 ---------------

@@ -1,13 +1,10 @@
-#include "simdjson.h"
-#include "fallback/implementation.h"
+#include "fallback/begin_implementation.h"
 #include "fallback/dom_parser_implementation.h"
 
-TARGET_HASWELL
+namespace {
+namespace SIMDJSON_IMPLEMENTATION {
 
-namespace simdjson {
-namespace fallback {
-
-WARN_UNUSED error_code implementation::create_dom_parser_implementation(
+SIMDJSON_WARN_UNUSED error_code implementation::create_dom_parser_implementation(
   size_t capacity,
   size_t max_depth,
   std::unique_ptr<internal::dom_parser_implementation>& dst
@@ -19,7 +16,7 @@ WARN_UNUSED error_code implementation::create_dom_parser_implementation(
   return SUCCESS;
 }
 
-} // namespace fallback
-} // namespace simdjson
+} // namespace SIMDJSON_IMPLEMENTATION
+} // unnamed namespace
 
-UNTARGET_REGION
+#include "fallback/end_implementation.h"

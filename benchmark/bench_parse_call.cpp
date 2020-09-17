@@ -10,6 +10,36 @@ const char *GSOC_JSON = SIMDJSON_BENCHMARK_DATA_DIR "gsoc-2018.json";
 
 
 
+static void unicode_validate_twitter(State& state) {
+  dom::parser parser;
+  padded_string docdata;
+  auto error = padded_string::load(TWITTER_JSON).get(docdata);
+  if(error) {
+      cerr << "could not parse twitter.json" << error << endl;
+      return;
+  }
+  // we do not want mem. alloc. in the loop.
+  error = parser.allocate(docdata.size());
+  if(error) {
+      cout << error << endl;
+      return;
+  }
+  size_t bytes = 0;
+  for (SIMDJSON_UNUSED auto _ : state) {
+    bool is_ok = simdjson::validate_utf8(docdata.data(), docdata.size());
+    bytes += docdata.size();
+    benchmark::DoNotOptimize(is_ok);
+  }
+  // Gigabyte: https://en.wikipedia.org/wiki/Gigabyte
+  state.counters["Gigabytes"] = benchmark::Counter(
+	        double(bytes), benchmark::Counter::kIsRate,
+	        benchmark::Counter::OneK::kIs1000); // For GiB : kIs1024
+  state.counters["docs"] = Counter(double(state.iterations()), benchmark::Counter::kIsRate);
+}
+BENCHMARK(unicode_validate_twitter)->Repetitions(10)->ComputeStatistics("max", [](const std::vector<double>& v) -> double {
+    return *(std::max_element(std::begin(v), std::end(v)));
+  })->DisplayAggregatesOnly(true);
+
 static void parse_twitter(State& state) {
   dom::parser parser;
   padded_string docdata;
@@ -25,10 +55,9 @@ static void parse_twitter(State& state) {
       return;
   }
   size_t bytes = 0;
-  for (UNUSED auto _ : state) {
+  for (SIMDJSON_UNUSED auto _ : state) {
     dom::element doc;
     bytes += docdata.size();
-    ;
     if ((error = parser.parse(docdata).get(doc))) {
       cerr << "could not parse twitter.json" << error << endl;
       return;
@@ -61,7 +90,7 @@ static void parse_gsoc(State& state) {
       return;
   }
   size_t bytes = 0;
-  for (UNUSED auto _ : state) {
+  for (SIMDJSON_UNUSED auto _ : state) {
     bytes += docdata.size();
     dom::element doc;
     if ((error = parser.parse(docdata).get(doc))) {
@@ -87,7 +116,7 @@ SIMDJSON_DISABLE_DEPRECATED_WARNING
 static void json_parse(State& state) {
   ParsedJson pj;
   if (!pj.allocate_capacity(EMPTY_ARRAY.length())) { return; }
-  for (UNUSED auto _ : state) {
+  for (SIMDJSON_UNUSED auto _ : state) {
     auto error = json_parse(EMPTY_ARRAY, pj);
     if (error) { return; }
   }
@@ -97,7 +126,7 @@ BENCHMARK(json_parse);
 static void parser_parse_error_code(State& state) {
   dom::parser parser;
   if (parser.allocate(EMPTY_ARRAY.length())) { return; }
-  for (UNUSED auto _ : state) {
+  for (SIMDJSON_UNUSED auto _ : state) {
     auto error = parser.parse(EMPTY_ARRAY).error();
     if (error) { return; }
   }
@@ -109,9 +138,9 @@ BENCHMARK(parser_parse_error_code);
 static void parser_parse_exception(State& state) {
   dom::parser parser;
   if (parser.allocate(EMPTY_ARRAY.length())) { return; }
-  for (UNUSED auto _ : state) {
+  for (SIMDJSON_UNUSED auto _ : state) {
     try {
-      UNUSED dom::element doc = parser.parse(EMPTY_ARRAY);
+      SIMDJSON_UNUSED dom::element doc = parser.parse(EMPTY_ARRAY);
     } catch(simdjson_error &j) {
       cout << j.what() << endl;
       return;
@@ -125,7 +154,7 @@ BENCHMARK(parser_parse_exception);
 SIMDJSON_PUSH_DISABLE_WARNINGS
 SIMDJSON_DISABLE_DEPRECATED_WARNING
 static void build_parsed_json(State& state) {
-  for (UNUSED auto _ : state) {
+  for (SIMDJSON_UNUSED auto _ : state) {
     dom::parser parser = simdjson::build_parsed_json(EMPTY_ARRAY);
     if (!parser.valid) { return; }
   }
@@ -134,7 +163,7 @@ SIMDJSON_POP_DISABLE_WARNINGS
 
 BENCHMARK(build_parsed_json);
 static void document_parse_error_code(State& state) {
-  for (UNUSED auto _ : state) {
+  for (SIMDJSON_UNUSED auto _ : state) {
     dom::parser parser;
     auto error = parser.parse(EMPTY_ARRAY).error();
     if (error) { return; }
@@ -145,10 +174,10 @@ BENCHMARK(document_parse_error_code);
 #if SIMDJSON_EXCEPTIONS
 
 static void document_parse_exception(State& state) {
-  for (UNUSED auto _ : state) {
+  for (SIMDJSON_UNUSED auto _ : state) {
     try {
       dom::parser parser;
-      UNUSED dom::element doc = parser.parse(EMPTY_ARRAY);
+      SIMDJSON_UNUSED dom::element doc = parser.parse(EMPTY_ARRAY);
     } catch(simdjson_error &j) {
       cout << j.what() << endl;
       return;

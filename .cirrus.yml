@@ -14,8 +14,8 @@ task:
   build_script:
     - mkdir build
     - cd build
-    - cmake ..
-    - make -j4
+    - cmake -DSIMDJSON_BASH=OFF  -DSIMDJSON_GIT=OFF ..
+    - make
   test_script:
     - cd build
-    - ctest -j4 --output-on-failure -E checkperf
+    - ctest --output-on-failure -E checkperf
