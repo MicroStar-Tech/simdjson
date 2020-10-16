@@ -1,3 +1,11 @@
+simdjson (0.5.0-2) unstable; urgency=medium
+
+  * Apply wrap-and-sort.
+  * Bump debhelper compat level to 13.
+  * Upload to unstable.
+
+ -- Mo Zhou <lumin@debian.org>  Fri, 16 Oct 2020 10:33:45 +0800
+
 simdjson (0.5.0-1) experimental; urgency=medium
 
   * New upstream version 0.5.0
