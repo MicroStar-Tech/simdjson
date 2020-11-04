@@ -1,9 +1,14 @@
-simdjson (0.6.1-1) UNRELEASED; urgency=medium
+simdjson (0.6.1-1~exp1) experimental; urgency=medium
 
   * New upstream version 0.6.1
   * Initialize foundamental autopkgtest control file.
+  * Bump SOVERSION and update the description according to upstream.
+  * Refresh symbols control file for amd64 and arm64.
+  * Add ppc64el to supported architecture list.
+  * Update d/copyright information.
+  * Apply wrap-and-sort and make some trivial formatting changes.
 
- -- Mo Zhou <lumin@debian.org>  Wed, 04 Nov 2020 11:26:15 +0800
+ -- Mo Zhou <lumin@debian.org>  Wed, 04 Nov 2020 13:35:18 +0800
 
 simdjson (0.5.0-2) unstable; urgency=medium
 
