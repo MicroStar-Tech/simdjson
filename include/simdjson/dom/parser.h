@@ -6,7 +6,6 @@
 #include "simdjson/error.h"
 #include "simdjson/internal/dom_parser_implementation.h"
 #include "simdjson/internal/tape_ref.h"
-#include "simdjson/minify.h"
 #include "simdjson/padded_string.h"
 #include "simdjson/portability.h"
 #include <memory>
@@ -24,28 +23,28 @@ class element;
 static constexpr size_t DEFAULT_BATCH_SIZE = 1000000;
 
 /**
-  * A persistent document parser.
-  *
-  * The parser is designed to be reused, holding the internal buffers necessary to do parsing,
-  * as well as memory for a single document. The parsed document is overwritten on each parse.
-  *
-  * This class cannot be copied, only moved, to avoid unintended allocations.
-  *
-  * @note This is not thread safe: one parser cannot produce two documents at the same time!
-  */
+ * A persistent document parser.
+ *
+ * The parser is designed to be reused, holding the internal buffers necessary to do parsing,
+ * as well as memory for a single document. The parsed document is overwritten on each parse.
+ *
+ * This class cannot be copied, only moved, to avoid unintended allocations.
+ *
+ * @note This is not thread safe: one parser cannot produce two documents at the same time!
+ */
 class parser {
 public:
   /**
-  * Create a JSON parser.
-  *
-  * The new parser will have zero capacity.
-  *
-  * @param max_capacity The maximum document length the parser can automatically handle. The parser
-  *    will allocate more capacity on an as needed basis (when it sees documents too big to handle)
-  *    up to this amount. The parser still starts with zero capacity no matter what this number is:
-  *    to allocate an initial capacity, call allocate() after constructing the parser.
-  *    Defaults to SIMDJSON_MAXSIZE_BYTES (the largest single document simdjson can process).
-  */
+   * Create a JSON parser.
+   *
+   * The new parser will have zero capacity.
+   *
+   * @param max_capacity The maximum document length the parser can automatically handle. The parser
+   *    will allocate more capacity on an as needed basis (when it sees documents too big to handle)
+   *    up to this amount. The parser still starts with zero capacity no matter what this number is:
+   *    to allocate an initial capacity, call allocate() after constructing the parser.
+   *    Defaults to SIMDJSON_MAXSIZE_BYTES (the largest single document simdjson can process).
+   */
   simdjson_really_inline explicit parser(size_t max_capacity = SIMDJSON_MAXSIZE_BYTES) noexcept;
   /**
    * Take another parser's buffers and state.
@@ -70,7 +69,10 @@ public:
    *
    *   dom::parser parser;
    *   const element doc = parser.load("jsonexamples/twitter.json");
-   *
+   * 
+   * The function is eager: the file's content is loaded in memory inside the parser instance
+   * and immediately parsed. The file can be deleted after the  `parser.load` call.
+   * 
    * ### IMPORTANT: Document Lifetime
    *
    * The JSON document still lives in the parser: this is the most efficient way to parse JSON
@@ -87,7 +89,8 @@ public:
    *         - IO_ERROR if there was an error opening or reading the file.
    *         - MEMALLOC if the parser does not have enough capacity and memory allocation fails.
    *         - CAPACITY if the parser does not have enough capacity and len > max_capacity.
-   *         - other json errors if parsing fails.
+   *         - other json errors if parsing fails. You should not rely on these errors to always the same for the
+   *           same document: they may vary under runtime dispatch (so they may vary depending on your system and hardware).
    */
   inline simdjson_result<element> load(const std::string &path) & noexcept;
   inline simdjson_result<element> load(const std::string &path) &&  = delete ;
@@ -96,6 +99,9 @@ public:
    *
    *   dom::parser parser;
    *   element doc = parser.parse(buf, len);
+   * 
+   * The function eagerly parses the input: the input can be modified and discarded after
+   * the `parser.parse(buf, len)` call has completed.
    *
    * ### IMPORTANT: Document Lifetime
    *
@@ -108,8 +114,30 @@ public:
    * The buffer must have at least SIMDJSON_PADDING extra allocated bytes. It does not matter what
    * those bytes are initialized to, as long as they are allocated.
    *
-   * If realloc_if_needed is true, it is assumed that the buffer does *not* have enough padding,
-   * and it is copied into an enlarged temporary buffer before parsing.
+   * If realloc_if_needed is true (the default), it is assumed that the buffer does *not* have enough padding,
+   * and it is copied into an enlarged temporary buffer before parsing. Thus the following is safe: 
+   * 
+   *   const char *json      = R"({"key":"value"})";
+   *   const size_t json_len = std::strlen(json);
+   *   simdjson::dom::parser parser;
+   *   simdjson::dom::element element = parser.parse(json, json_len);
+   * 
+   * If you set realloc_if_needed to false (e.g., parser.parse(json, json_len, false)), 
+   * you must provide a buffer with at least SIMDJSON_PADDING extra bytes at the end.
+   * The benefit of setting realloc_if_needed to false is that you avoid a temporary
+   * memory allocation and a copy.
+   * 
+   * The padded bytes may be read. It is not important how you initialize
+   * these bytes though we recommend a sensible default like null character values or spaces.
+   * For example, the following low-level code is safe:
+   * 
+   *   const char *json      = R"({"key":"value"})";
+   *   const size_t json_len = std::strlen(json);
+   *   std::unique_ptr<char[]> padded_json_copy{new char[json_len + SIMDJSON_PADDING]};
+   *   std::memcpy(padded_json_copy.get(), json, json_len);
+   *   std::memset(padded_json_copy.get() + json_len, '\0', SIMDJSON_PADDING);
+   *   simdjson::dom::parser parser;
+   *   simdjson::dom::element element = parser.parse(padded_json_copy.get(), json_len, false);
    *
    * ### Parser Capacity
    *
@@ -124,7 +152,8 @@ public:
    *         - MEMALLOC if realloc_if_needed is true or the parser does not have enough capacity,
    *           and memory allocation fails.
    *         - CAPACITY if the parser does not have enough capacity and len > max_capacity.
-   *         - other json errors if parsing fails.
+   *         - other json errors if parsing fails. You should not rely on these errors to always the same for the
+   *           same document: they may vary under runtime dispatch (so they may vary depending on your system and hardware).
    */
   inline simdjson_result<element> parse(const uint8_t *buf, size_t len, bool realloc_if_needed = true) & noexcept;
   inline simdjson_result<element> parse(const uint8_t *buf, size_t len, bool realloc_if_needed = true) && =delete;
@@ -149,6 +178,13 @@ public:
    *     cout << std::string(doc["title"]) << endl;
    *   }
    *
+   * The file is loaded in memory and can be safely deleted after the `parser.load_many(path)`
+   * function has returned. The memory is held by the `parser` instance.
+   * 
+   * The function is lazy: it may be that no more than one JSON document at a time is parsed.
+   * And, possibly, no document many have been parsed when the `parser.load_many(path)` function
+   * returned.
+   * 
    * ### Format
    *
    * The file must contain a series of one or more JSON documents, concatenated into a single
@@ -156,7 +192,7 @@ public:
    * then starts parsing the next document at that point. (It does this with more parallelism and
    * lookahead than you might think, though.)
    *
-   * documents that consist of an object or array may omit the whitespace between them, concatenating
+   * Documents that consist of an object or array may omit the whitespace between them, concatenating
    * with no separator. documents that consist of a single primitive (i.e. documents that are not
    * arrays or objects) MUST be separated with whitespace.
    * 
@@ -201,7 +237,8 @@ public:
    *         - IO_ERROR if there was an error opening or reading the file.
    *         - MEMALLOC if the parser does not have enough capacity and memory allocation fails.
    *         - CAPACITY if the parser does not have enough capacity and batch_size > max_capacity.
-   *         - other json errors if parsing fails.
+   *         - other json errors if parsing fails. You should not rely on these errors to always the same for the
+   *           same document: they may vary under runtime dispatch (so they may vary depending on your system and hardware).
    */
   inline simdjson_result<document_stream> load_many(const std::string &path, size_t batch_size = DEFAULT_BATCH_SIZE) noexcept;
 
@@ -213,6 +250,30 @@ public:
    *     cout << std::string(doc["title"]) << endl;
    *   }
    *
+   * No copy of the input buffer is made.
+   *
+   * The function is lazy: it may be that no more than one JSON document at a time is parsed.
+   * And, possibly, no document many have been parsed when the `parser.load_many(path)` function
+   * returned.
+   * 
+   * The caller is responsabile to ensure that the input string data remains unchanged and is
+   * not deleted during the loop. In particular, the following is unsafe and will not compile:
+   * 
+   *   auto docs = parser.parse_many("[\"temporary data\"]"_padded);
+   *   // here the string "[\"temporary data\"]" may no longer exist in memory
+   *   // the parser instance may not have even accessed the input yet
+   *   for (element doc : docs) {
+   *     cout << std::string(doc["title"]) << endl;
+   *   }
+   * 
+   * The following is safe: 
+   * 
+   *   auto json = "[\"temporary data\"]"_padded;
+   *   auto docs = parser.parse_many(json);
+   *   for (element doc : docs) {
+   *     cout << std::string(doc["title"]) << endl;
+   *   }
+   *     
    * ### Format
    *
    * The buffer must contain a series of one or more JSON documents, concatenated into a single
@@ -270,16 +331,19 @@ public:
    * @return The stream, or an error. An empty input will yield 0 documents rather than an EMPTY error. Errors:
    *         - MEMALLOC if the parser does not have enough capacity and memory allocation fails
    *         - CAPACITY if the parser does not have enough capacity and batch_size > max_capacity.
-   *         - other json errors if parsing fails.
+   *         - other json errors if parsing fails. You should not rely on these errors to always the same for the
+   *           same document: they may vary under runtime dispatch (so they may vary depending on your system and hardware).
    */
   inline simdjson_result<document_stream> parse_many(const uint8_t *buf, size_t len, size_t batch_size = DEFAULT_BATCH_SIZE) noexcept;
   /** @overload parse_many(const uint8_t *buf, size_t len, size_t batch_size) */
   inline simdjson_result<document_stream> parse_many(const char *buf, size_t len, size_t batch_size = DEFAULT_BATCH_SIZE) noexcept;
   /** @overload parse_many(const uint8_t *buf, size_t len, size_t batch_size) */
   inline simdjson_result<document_stream> parse_many(const std::string &s, size_t batch_size = DEFAULT_BATCH_SIZE) noexcept;
+  inline simdjson_result<document_stream> parse_many(const std::string &&s, size_t batch_size) = delete;// unsafe
   /** @overload parse_many(const uint8_t *buf, size_t len, size_t batch_size) */
   inline simdjson_result<document_stream> parse_many(const padded_string &s, size_t batch_size = DEFAULT_BATCH_SIZE) noexcept;
-
+  inline simdjson_result<document_stream> parse_many(const padded_string &&s, size_t batch_size) = delete;// unsafe
+  
   /** @private We do not want to allow implicit conversion from C string to std::string. */
   simdjson_result<document_stream> parse_many(const char *buf, size_t batch_size = DEFAULT_BATCH_SIZE) noexcept = delete;
 
@@ -291,7 +355,7 @@ public:
    * @param max_depth The new max_depth. Defaults to DEFAULT_MAX_DEPTH.
    * @return The error, if there is one.
    */
-  SIMDJSON_WARN_UNUSED inline error_code allocate(size_t capacity, size_t max_depth = DEFAULT_MAX_DEPTH) noexcept;
+  simdjson_warn_unused inline error_code allocate(size_t capacity, size_t max_depth = DEFAULT_MAX_DEPTH) noexcept;
 
   /**
    * @private deprecated because it returns bool instead of error_code, which is our standard for
@@ -305,7 +369,7 @@ public:
    * @return true if successful, false if allocation failed.
    */
   [[deprecated("Use allocate() instead.")]]
-  SIMDJSON_WARN_UNUSED inline bool allocate_capacity(size_t capacity, size_t max_depth = DEFAULT_MAX_DEPTH) noexcept;
+  simdjson_warn_unused inline bool allocate_capacity(size_t capacity, size_t max_depth = DEFAULT_MAX_DEPTH) noexcept;
 
   /**
    * The largest document this parser can support without reallocating.
