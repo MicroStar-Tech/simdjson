@@ -25,9 +25,10 @@ Description: Parsing gigabytes of JSON per second (shared object)
   * Beyond DOM: Try the new On Demand API for twice the speed (>4GB/s).
   * Strict: Full JSON and UTF-8 validation, lossless parsing. Performance with
     no compromises.
-  * Automatic: Selects a CPU-tailored parser at runtime. No configuration needed.
-  * Reliable: From memory allocation to error handling, simdjson's design avoids
-    surprises.
+  * Automatic: Selects a CPU-tailored parser at runtime.
+    No configuration needed.
+  * Reliable: From memory allocation to error handling, simdjson's design
+    avoids surprises.
   * Peer Reviewed: Our research appears in venues like VLDB Journal,
     Software: Practice and Experience.
  .
@@ -50,9 +51,10 @@ Description: Parsing gigabytes of JSON per second (development)
   * Beyond DOM: Try the new On Demand API for twice the speed (>4GB/s).
   * Strict: Full JSON and UTF-8 validation, lossless parsing. Performance with
     no compromises.
-  * Automatic: Selects a CPU-tailored parser at runtime. No configuration needed.
-  * Reliable: From memory allocation to error handling, simdjson's design avoids
-    surprises.
+  * Automatic: Selects a CPU-tailored parser at runtime.
+    No configuration needed.
+  * Reliable: From memory allocation to error handling, simdjson's design
+    avoids surprises.
   * Peer Reviewed: Our research appears in venues like VLDB Journal,
     Software: Practice and Experience.
  .

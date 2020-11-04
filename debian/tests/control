@@ -4,5 +4,5 @@ Test-Command: g++
  $(dpkg-buildflags --get LDFALGS)
  examples/quickstart/quickstart.cpp -lsimdjson -o quickstart;
  cd jsonexamples/; ../quickstart
-Depends: @, build-essential, g++
+Depends: build-essential, g++, @
 Restrictions: allow-stderr
