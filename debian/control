@@ -9,43 +9,51 @@ Maintainer: Mo Zhou <lumin@debian.org>
 Build-Depends: cmake, debhelper-compat (= 13)
 Rules-Requires-Root: no
 
-Package: libsimdjson3
+Package: libsimdjson4
 Architecture: any-amd64 arm64
 Depends: ${misc:Depends}, ${shlibs:Depends}
 Description: Parsing gigabytes of JSON per second (shared object)
  JSON is everywhere on the Internet. Servers spend a *lot* of time parsing it.
- The simdjson library uses commonly available SIMD instructions and
- microparallel algorithms to parse JSON 2.5x faster than anything else out
- there.
+ We need a fresh approach. The simdjson library uses commonly available SIMD
+ instructions and microparallel algorithms to parse JSON 2.5x faster than
+ RapidJSON and 25x faster than JSON for Modern C++.
  .
- Fast: Over 2.5x faster than other production-grade JSON parsers.
- Easy: First-class, easy to use API.
- Strict: Full JSON and UTF-8 validation, lossless parsing.
-         Performance with no compromises.
- Automatic: Selects a CPU-tailored parser at runtime.
-            No configuration needed.
- Reliable: From memory allocation to error handling,
-           simdjson's design avoids surprises.
+  * Fast: Over 2.5x faster than commonly used production-grade JSON parsers.
+  * Record Breaking Features: Minify JSON at 6 GB/s, validate UTF-8 at 13 GB/s,
+    NDJSON at 3.5 GB/s.
+  * Easy: First-class, easy to use and carefully documented APIs.
+  * Beyond DOM: Try the new On Demand API for twice the speed (>4GB/s).
+  * Strict: Full JSON and UTF-8 validation, lossless parsing. Performance with
+    no compromises.
+  * Automatic: Selects a CPU-tailored parser at runtime. No configuration needed.
+  * Reliable: From memory allocation to error handling, simdjson's design avoids
+    surprises.
+  * Peer Reviewed: Our research appears in venues like VLDB Journal,
+    Software: Practice and Experience.
  .
  This package ships the shared object.
 
 Package: libsimdjson-dev
 Section: libdevel
 Architecture: any-amd64 arm64
-Depends: libsimdjson3 (= ${binary:Version}), ${misc:Depends}
+Depends: libsimdjson4 (= ${binary:Version}), ${misc:Depends}
 Description: Parsing gigabytes of JSON per second (development)
  JSON is everywhere on the Internet. Servers spend a *lot* of time parsing it.
- The simdjson library uses commonly available SIMD instructions and
- microparallel algorithms to parse JSON 2.5x faster than anything else out
- there.
+ We need a fresh approach. The simdjson library uses commonly available SIMD
+ instructions and microparallel algorithms to parse JSON 2.5x faster than
+ RapidJSON and 25x faster than JSON for Modern C++.
  .
- Fast: Over 2.5x faster than other production-grade JSON parsers.
- Easy: First-class, easy to use API.
- Strict: Full JSON and UTF-8 validation, lossless parsing.
-         Performance with no compromises.
- Automatic: Selects a CPU-tailored parser at runtime.
-            No configuration needed.
- Reliable: From memory allocation to error handling,
-           simdjson's design avoids surprises.
+  * Fast: Over 2.5x faster than commonly used production-grade JSON parsers.
+  * Record Breaking Features: Minify JSON at 6 GB/s, validate UTF-8 at 13 GB/s,
+    NDJSON at 3.5 GB/s.
+  * Easy: First-class, easy to use and carefully documented APIs.
+  * Beyond DOM: Try the new On Demand API for twice the speed (>4GB/s).
+  * Strict: Full JSON and UTF-8 validation, lossless parsing. Performance with
+    no compromises.
+  * Automatic: Selects a CPU-tailored parser at runtime. No configuration needed.
+  * Reliable: From memory allocation to error handling, simdjson's design avoids
+    surprises.
+  * Peer Reviewed: Our research appears in venues like VLDB Journal,
+    Software: Practice and Experience.
  .
  This package ships development files.
