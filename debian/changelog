@@ -1,3 +1,11 @@
+simdjson (0.6.1-2) unstable; urgency=medium
+
+  * Refresh symbols control file for ppc64el and x32.
+  * Change Architecture of the binary packages to "any".
+  * Rename libsimdjson4.symbols -> libsimdjson4.symbols.amd64.
+
+ -- Mo Zhou <lumin@debian.org>  Thu, 26 Nov 2020 14:32:01 +0800
+
 simdjson (0.6.1-1) unstable; urgency=medium
 
   * Upload to unstable.
