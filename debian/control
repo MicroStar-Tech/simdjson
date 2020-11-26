@@ -10,7 +10,7 @@ Build-Depends: cmake, debhelper-compat (= 13)
 Rules-Requires-Root: no
 
 Package: libsimdjson4
-Architecture: any-amd64 arm64 ppc64el
+Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends}
 Description: Parsing gigabytes of JSON per second (shared object)
  JSON is everywhere on the Internet. Servers spend a *lot* of time parsing it.
@@ -36,7 +36,7 @@ Description: Parsing gigabytes of JSON per second (shared object)
 
 Package: libsimdjson-dev
 Section: libdevel
-Architecture: any-amd64 arm64 ppc64el
+Architecture: any
 Depends: libsimdjson4 (= ${binary:Version}), ${misc:Depends}
 Description: Parsing gigabytes of JSON per second (development)
  JSON is everywhere on the Internet. Servers spend a *lot* of time parsing it.
