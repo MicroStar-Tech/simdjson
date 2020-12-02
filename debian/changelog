@@ -1,3 +1,11 @@
+simdjson (0.6.1-2~bpo10+1) buster-backports; urgency=medium
+
+  * Rebuild for buster-backports.
+  * Downgrade debhelper compat to 12.
+  * Purge the symbols control files.
+
+ -- Mo Zhou <lumin@debian.org>  Wed, 02 Dec 2020 20:02:08 +0800
+
 simdjson (0.6.1-2) unstable; urgency=medium
 
   * Refresh symbols control file for ppc64el and x32.
