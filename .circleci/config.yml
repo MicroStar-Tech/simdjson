@@ -61,6 +61,19 @@ executors:
 
 # Reusable test commands (and initializer for clang 6)
 commands:
+  dependency_restore:
+    steps:
+      - restore_cache:
+          keys:
+            - cmake-cache-{{ checksum "dependencies/CMakeLists.txt" }}
+
+  dependency_cache:
+    steps:
+      - save_cache:
+          key: cmake-cache-{{ checksum "dependencies/CMakeLists.txt" }}
+          paths:
+            - dependencies/.cache
+
   install_cmake:
     steps:
       - run: apt-get update -qq
@@ -74,7 +87,9 @@ commands:
   cmake_build_cache:
     steps:
       - cmake_prep
+      - dependency_restore
       - run: cmake $CMAKE_FLAGS -DCMAKE_INSTALL_PREFIX:PATH=destination -B build . 
+      - dependency_cache # dependencies are produced in the configure step
 
   cmake_build:
     steps:
@@ -166,7 +181,16 @@ jobs:
     executor: clang10
     environment: { CMAKE_FLAGS: -DSIMDJSON_BUILD_STATIC=OFF -DSIMDJSON_SANITIZE=ON, CTEST_FLAGS: --output-on-failure -E checkperf }
     steps: [ cmake_test ]
-
+  threadsanitize-gcc10:
+    description: Build and run tests on GCC 10 and AVX 2 with a cmake sanitize build
+    executor: gcc10
+    environment: { CMAKE_FLAGS: -DSIMDJSON_BUILD_STATIC=OFF -DSIMDJSON_SANITIZE_THREADS=ON, BUILD_FLAGS: "", CTEST_FLAGS: --output-on-failure -E checkperf }
+    steps: [ cmake_test ]
+  threadsanitize-clang10:
+    description: Build and run tests on clang 10 and AVX 2 with a cmake sanitize build
+    executor: clang10
+    environment: { CMAKE_FLAGS: -DSIMDJSON_BUILD_STATIC=OFF -DSIMDJSON_SANITIZE_THREADS=ON, CTEST_FLAGS: --output-on-failure -E checkperf }
+    steps: [ cmake_test ]
   # dynamic
   dynamic-gcc10:
     description: Build and run tests on GCC 10 and AVX 2 with a cmake dynamic build
@@ -245,6 +269,8 @@ workflows:
       # full single-implementation tests
       - sanitize-gcc10
       - sanitize-clang10
+      - threadsanitize-gcc10
+      - threadsanitize-clang10
       - dynamic-gcc10
       - dynamic-clang10
       - unthreaded-gcc10

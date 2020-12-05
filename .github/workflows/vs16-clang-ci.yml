@@ -1,6 +1,12 @@
 name: VS16-CLANG-CI
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
 
 jobs:
   ci:
@@ -8,6 +14,10 @@ jobs:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v2
+    - uses: actions/cache@v2
+      with:
+        path: dependencies/.cache
+        key: ${{ hashFiles('dependencies/CMakeLists.txt') }}
     - name: 'Run CMake with VS16'
       uses: lukka/run-cmake@v2
       with:

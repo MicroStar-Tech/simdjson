@@ -3,7 +3,7 @@
 [![Ubuntu 20.04 CI](https://github.com/simdjson/simdjson/workflows/Ubuntu%2020.04%20CI%20(GCC%209)/badge.svg)](https://simdjson.org/plots.html)
 ![VS16-CI](https://github.com/simdjson/simdjson/workflows/VS16-CI/badge.svg)
 ![MinGW64-CI](https://github.com/simdjson/simdjson/workflows/MinGW64-CI/badge.svg)
-[![][license img]][license]  [![Doxygen Documentation](https://img.shields.io/badge/docs-doxygen-green.svg)](https://simdjson.org/api/0.6.0/index.html)
+[![][license img]][license]  [![Doxygen Documentation](https://img.shields.io/badge/docs-doxygen-green.svg)](https://simdjson.org/api/0.7.0/index.html)
 
 simdjson : Parsing gigabytes of JSON per second
 ===============================================
@@ -40,10 +40,10 @@ Table of Contents
 Quick Start
 -----------
 
-          
+
 The simdjson library is easily consumable with a single .h and .cpp file.
 
-0. Prerequisites: `g++` (version 7 or better) or `clang++` (version 6 or better), and a 64-bit system with a command-line shell (e.g., Linux, macOS, freeBSD). We also support programming environnements like Visual Studio and Xcode, but different steps are needed.
+0. Prerequisites: `g++` (version 7 or better) or `clang++` (version 6 or better), and a 64-bit system with a command-line shell (e.g., Linux, macOS, freeBSD). We also support programming environments like Visual Studio and Xcode, but different steps are needed.
 1. Pull [simdjson.h](singleheader/simdjson.h) and [simdjson.cpp](singleheader/simdjson.cpp) into a directory, along with the sample file [twitter.json](jsonexamples/twitter.json).
    ```
    wget https://raw.githubusercontent.com/simdjson/simdjson/master/singleheader/simdjson.h https://raw.githubusercontent.com/simdjson/simdjson/master/singleheader/simdjson.cpp https://raw.githubusercontent.com/simdjson/simdjson/master/jsonexamples/twitter.json
@@ -73,7 +73,7 @@ Usage documentation is available:
 * [Performance](doc/performance.md) shows some more advanced scenarios and how to tune for them.
 * [Implementation Selection](doc/implementation-selection.md) describes runtime CPU detection and
   how you can work with it.
-* [API](https://simdjson.org/api/0.6.0/annotated.html) contains the automatically generated API documentation.
+* [API](https://simdjson.org/api/0.7.0/annotated.html) contains the automatically generated API documentation.
 
 Performance results
 -------------------
@@ -168,7 +168,7 @@ instructions, reducing branch misprediction, and reducing data dependency to tak
 CPU's multiple execution cores.
 
 Some people [enjoy reading our paper](https://arxiv.org/abs/1902.08318): A description of the design
-and implementation of simdjson is in our research article: 
+and implementation of simdjson is in our research article:
 - Geoff Langdale, Daniel Lemire, [Parsing Gigabytes of JSON per Second](https://arxiv.org/abs/1902.08318), VLDB Journal 28 (6), 2019.
 
 We have an in-depth paper focused on the UTF-8 validation:

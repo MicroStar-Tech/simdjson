@@ -1,12 +1,22 @@
 name: Alpine Linux
-'on':
-  - push
-  - pull_request
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
 jobs:
   ubuntu-build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        with:
+          path: dependencies/.cache
+          key: ${{ hashFiles('dependencies/CMakeLists.txt') }}
       - name: start docker
         run: |
           docker run -w /src -dit --name alpine -v $PWD:/src alpine:latest
@@ -24,4 +34,4 @@ jobs:
           ./alpine.sh cmake --build build_for_alpine
       - name: test
         run: |
-          ./alpine.sh bash -c "cd build_for_alpine && ctest"
+          ./alpine.sh bash -c "cd build_for_alpine && ctest  -E checkperf"
