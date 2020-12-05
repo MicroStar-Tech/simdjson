@@ -1,8 +1,9 @@
-simdjson (0.7.0-1) UNRELEASED; urgency=medium
+simdjson (0.7.0-1~exp1) experimental; urgency=medium
 
   * New upstream version 0.7.0
+  * SOVERSION bump from 4 -> 5; rename packages accordingly.
 
- -- Mo Zhou <lumin@debian.org>  Sat, 05 Dec 2020 15:15:50 +0800
+ -- Mo Zhou <lumin@debian.org>  Sat, 05 Dec 2020 16:05:57 +0800
 
 simdjson (0.6.1-2) unstable; urgency=medium
 
