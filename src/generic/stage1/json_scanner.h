@@ -9,7 +9,7 @@ namespace stage1 {
  * We seek to identify pseudo-structural characters. Anything that is inside
  * a string must be omitted (hence  & ~_string.string_tail()).
  * Otherwise, pseudo-structural characters come in two forms.
- * 1. We have the structural characters ([,],{,},:, comma). The 
+ * 1. We have the structural characters ([,],{,},:, comma). The
  *    term 'structural character' is from the JSON RFC.
  * 2. We have the 'scalar pseudo-structural characters'.
  *    Scalars are quotes, and any character except structural characters and white space.
@@ -92,7 +92,8 @@ class json_scanner {
 public:
   json_scanner() {}
   simdjson_really_inline json_block next(const simd::simd8x64<uint8_t>& in);
-  simdjson_really_inline error_code finish(bool streaming);
+  // Returns either UNCLOSED_STRING or SUCCESS
+  simdjson_really_inline error_code finish();
 
 private:
   // Whether the last character of the previous iteration is part of a scalar token
@@ -138,8 +139,8 @@ simdjson_really_inline json_block json_scanner::next(const simd::simd8x64<uint8_
   };
 }
 
-simdjson_really_inline error_code json_scanner::finish(bool streaming) {
-  return string_scanner.finish(streaming);
+simdjson_really_inline error_code json_scanner::finish() {
+  return string_scanner.finish();
 }
 
 } // namespace stage1

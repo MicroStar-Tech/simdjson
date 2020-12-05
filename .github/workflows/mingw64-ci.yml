@@ -1,6 +1,12 @@
 name: MinGW64-CI
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
 
 # Important: scoop will either install 32-bit GCC or 64-bit GCC, not both.
 
@@ -26,6 +32,12 @@ jobs:
           path: |
             C:\ProgramData\scoop
           key: scoop64 # static key: should be good forever
+
+      - uses: actions/cache@v2
+        with:
+          path: dependencies/.cache
+          key: ${{ hashFiles('dependencies/CMakeLists.txt') }}
+
       - name: Setup Windows # This should almost never run if the cache works.
         if: steps.cache.outputs.cache-hit != 'true'
         shell: powershell

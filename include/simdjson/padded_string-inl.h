@@ -12,20 +12,31 @@
 namespace simdjson {
 namespace internal {
 
-// The allocate_padded_buffer function is a low-level function to allocate memory 
-// with padding so we can read past the "length" bytes safely. It is used by 
+// The allocate_padded_buffer function is a low-level function to allocate memory
+// with padding so we can read past the "length" bytes safely. It is used by
 // the padded_string class automatically. It returns nullptr in case
 // of error: the caller should check for a null pointer.
-// The length parameter is the maximum size in bytes of the string. 
+// The length parameter is the maximum size in bytes of the string.
 // The caller is responsible to free the memory (e.g., delete[] (...)).
 inline char *allocate_padded_buffer(size_t length) noexcept {
-  size_t totalpaddedlength = length + SIMDJSON_PADDING;
+  const size_t totalpaddedlength = length + SIMDJSON_PADDING;
+  if(totalpaddedlength<length) {
+    // overflow
+    return nullptr;
+  }
+#ifdef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
+  // avoid getting out of memory
+  if (totalpaddedlength>(1UL<<20)) {
+    return nullptr;
+  }
+#endif
+
   char *padded_buffer = new (std::nothrow) char[totalpaddedlength];
   if (padded_buffer == nullptr) {
     return nullptr;
   }
-  // We write zeroes in the padded region to avoid having uninitized 
-  // garbage. If nothing else, garbage getting read might trigger a 
+  // We write zeroes in the padded region to avoid having uninitized
+  // garbage. If nothing else, garbage getting read might trigger a
   // warning in a memory checking.
   std::memset(padded_buffer + length, 0, totalpaddedlength - length);
   return padded_buffer;
@@ -54,6 +65,11 @@ inline padded_string::padded_string(const std::string & str_ ) noexcept
 // note: do pass std::string_view arguments by value
 inline padded_string::padded_string(std::string_view sv_) noexcept
     : viable_size(sv_.size()), data_ptr(internal::allocate_padded_buffer(sv_.size())) {
+  if(simdjson_unlikely(!data_ptr)) {
+    //allocation failed or zero size
+    viable_size=0;
+    return;
+  }
   if (sv_.size()) {
     std::memcpy(data_ptr, sv_.data(), sv_.size());
   }

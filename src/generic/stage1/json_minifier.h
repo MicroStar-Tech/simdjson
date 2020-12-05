@@ -32,7 +32,7 @@ simdjson_really_inline void json_minifier::next(const simd::simd8x64<uint8_t>& i
 }
 
 simdjson_really_inline error_code json_minifier::finish(uint8_t *dst_start, size_t &dst_len) {
-  error_code error = scanner.finish(false);
+  error_code error = scanner.finish();
   if (error) { dst_len = 0; return error; }
   dst_len = dst - dst_start;
   return SUCCESS;
@@ -69,7 +69,7 @@ error_code json_minifier::minify(const uint8_t *buf, size_t len, uint8_t *dst, s
 
   // Index the last (remainder) block, padded with spaces
   uint8_t block[STEP_SIZE];
-  size_t remaining_bytes = reader.get_remainder(block); 
+  size_t remaining_bytes = reader.get_remainder(block);
   if (remaining_bytes > 0) {
     // We do not want to write directly to the output stream. Rather, we write
     // to a local buffer (for safety).

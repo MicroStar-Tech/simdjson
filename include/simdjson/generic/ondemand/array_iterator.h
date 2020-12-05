@@ -10,7 +10,7 @@ class document;
 
 /**
  * A forward-only JSON array.
- * 
+ *
  * This is an input_iterator, meaning:
  * - It is forward-only
  * - * must be called exactly once per element.
@@ -30,7 +30,7 @@ public:
 
   /**
    * Get the current element.
-   * 
+   *
    * Part of the std::iterator interface.
    */
   simdjson_really_inline simdjson_result<value> operator*() noexcept; // MUST ONLY BE CALLED ONCE PER ITERATION.
@@ -38,21 +38,21 @@ public:
    * Check if we are at the end of the JSON.
    *
    * Part of the std::iterator interface.
-   * 
+   *
    * @return true if there are no more elements in the JSON array.
    */
-  simdjson_really_inline bool operator==(const array_iterator<T> &) noexcept;
+  simdjson_really_inline bool operator==(const array_iterator<T> &) const noexcept;
   /**
    * Check if there are more elements in the JSON array.
    *
    * Part of the std::iterator interface.
-   * 
+   *
    * @return true if there are more elements in the JSON array.
    */
-  simdjson_really_inline bool operator!=(const array_iterator<T> &) noexcept;
+  simdjson_really_inline bool operator!=(const array_iterator<T> &) const noexcept;
   /**
    * Move to the next element.
-   * 
+   *
    * Part of the std::iterator interface.
    */
   simdjson_really_inline array_iterator<T> &operator++() noexcept;
@@ -91,8 +91,8 @@ public:
   //
 
   simdjson_really_inline simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::value> operator*() noexcept; // MUST ONLY BE CALLED ONCE PER ITERATION.
-  simdjson_really_inline bool operator==(const simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::array_iterator<T>> &) noexcept;
-  simdjson_really_inline bool operator!=(const simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::array_iterator<T>> &) noexcept;
+  simdjson_really_inline bool operator==(const simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::array_iterator<T>> &) const noexcept;
+  simdjson_really_inline bool operator!=(const simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::array_iterator<T>> &) const noexcept;
   simdjson_really_inline simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::array_iterator<T>> &operator++() noexcept;
 };
 
