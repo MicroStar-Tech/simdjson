@@ -1,3 +1,9 @@
+simdjson (0.7.0-1) UNRELEASED; urgency=medium
+
+  * New upstream version 0.7.0
+
+ -- Mo Zhou <lumin@debian.org>  Sat, 05 Dec 2020 15:15:50 +0800
+
 simdjson (0.6.1-2) unstable; urgency=medium
 
   * Refresh symbols control file for ppc64el and x32.
