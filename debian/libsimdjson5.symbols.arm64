@@ -1,4 +1,4 @@
-libsimdjson.so.4 libsimdjson4 #MINVER#
+libsimdjson.so.5 libsimdjson5 #MINVER#
  _ZN8simdjson13validate_utf8EPKcm@Base 0.6.1
  _ZN8simdjson21active_implementationE@Base 0.3.0
  _ZN8simdjson22builtin_implementationEv@Base 0.6.1
