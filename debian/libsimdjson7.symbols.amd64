@@ -1,4 +1,4 @@
-libsimdjson.so.5 libsimdjson5 #MINVER#
+libsimdjson.so.7 libsimdjson7 #MINVER#
 * Build-Depends-Package: libsimdjson-dev
  _ZN8simdjson13validate_utf8EPKcm@Base 0.5.0
  _ZN8simdjson21active_implementationE@Base 0.5.0

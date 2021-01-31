@@ -9,7 +9,7 @@ Maintainer: Mo Zhou <lumin@debian.org>
 Build-Depends: cmake, debhelper-compat (= 13)
 Rules-Requires-Root: no
 
-Package: libsimdjson5
+Package: libsimdjson7
 Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends}
 Description: Parsing gigabytes of JSON per second (shared object)
@@ -37,7 +37,7 @@ Description: Parsing gigabytes of JSON per second (shared object)
 Package: libsimdjson-dev
 Section: libdevel
 Architecture: any
-Depends: libsimdjson5 (= ${binary:Version}), ${misc:Depends}
+Depends: libsimdjson7 (= ${binary:Version}), ${misc:Depends}
 Description: Parsing gigabytes of JSON per second (development)
  JSON is everywhere on the Internet. Servers spend a *lot* of time parsing it.
  We need a fresh approach. The simdjson library uses commonly available SIMD
