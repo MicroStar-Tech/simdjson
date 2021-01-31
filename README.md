@@ -3,7 +3,7 @@
 [![Ubuntu 20.04 CI](https://github.com/simdjson/simdjson/workflows/Ubuntu%2020.04%20CI%20(GCC%209)/badge.svg)](https://simdjson.org/plots.html)
 ![VS16-CI](https://github.com/simdjson/simdjson/workflows/VS16-CI/badge.svg)
 ![MinGW64-CI](https://github.com/simdjson/simdjson/workflows/MinGW64-CI/badge.svg)
-[![][license img]][license]  [![Doxygen Documentation](https://img.shields.io/badge/docs-doxygen-green.svg)](https://simdjson.org/api/0.7.0/index.html)
+[![][license img]][license]  [![Doxygen Documentation](https://img.shields.io/badge/docs-doxygen-green.svg)](https://simdjson.org/api/0.8.0/index.html)
 
 simdjson : Parsing gigabytes of JSON per second
 ===============================================
@@ -28,6 +28,7 @@ Table of Contents
 -----------------
 
 * [Quick Start](#quick-start)
+  * [On Demand](#on-demand)
 * [Documentation](#documentation)
 * [Performance results](#performance-results)
 * [Real-world usage](#real-world-usage)
@@ -40,11 +41,14 @@ Table of Contents
 Quick Start
 -----------
 
-
 The simdjson library is easily consumable with a single .h and .cpp file.
 
-0. Prerequisites: `g++` (version 7 or better) or `clang++` (version 6 or better), and a 64-bit system with a command-line shell (e.g., Linux, macOS, freeBSD). We also support programming environments like Visual Studio and Xcode, but different steps are needed.
-1. Pull [simdjson.h](singleheader/simdjson.h) and [simdjson.cpp](singleheader/simdjson.cpp) into a directory, along with the sample file [twitter.json](jsonexamples/twitter.json).
+0. Prerequisites: `g++` (version 7 or better) or `clang++` (version 6 or better), and a 64-bit
+   system with a command-line shell (e.g., Linux, macOS, freeBSD). We also support programming
+   environments like Visual Studio and Xcode, but different steps are needed.
+1. Pull [simdjson.h](singleheader/simdjson.h) and [simdjson.cpp](singleheader/simdjson.cpp) into a
+   directory, along with the sample file [twitter.json](jsonexamples/twitter.json).
+
    ```
    wget https://raw.githubusercontent.com/simdjson/simdjson/master/singleheader/simdjson.h https://raw.githubusercontent.com/simdjson/simdjson/master/singleheader/simdjson.cpp https://raw.githubusercontent.com/simdjson/simdjson/master/jsonexamples/twitter.json
    ```
@@ -64,6 +68,34 @@ The simdjson library is easily consumable with a single .h and .cpp file.
    100 results.
    ```
 
+### On Demand
+
+The new On Demand JSON parser is just as easy, but much faster due to just-in-time parsing. It is in
+alpha right now. More information can be found in the [On Demand Guide](doc/ondemand.md).
+
+1. Do step 1 of the [Quick Start](#quick-start).
+2. Create `quickstart.cpp`:
+
+   ```c++
+   #include "simdjson.h"
+   using namespace simdjson;
+   int main(void) {
+      ondemand::parser parser;
+      padded_string json = padded_string::load("twitter.json");
+      ondemand::document tweets = parser.iterate(json);
+      std::cout << uint64_t(tweets["search_metadata"]["count"]) << " results." << std::endl;
+   }
+   ```
+3. `c++ -march=native -o quickstart quickstart.cpp simdjson.cpp`
+4. `./quickstart`
+   ```
+   100 results.
+   ```
+
+You'll notice that the code here is very similar to the [main Quick Start code](#quick-start) (and
+indeed, it does the same thing). However, if you compare the performance, you should find On
+Demand much faster.
+
 Documentation
 -------------
 
@@ -73,7 +105,7 @@ Usage documentation is available:
 * [Performance](doc/performance.md) shows some more advanced scenarios and how to tune for them.
 * [Implementation Selection](doc/implementation-selection.md) describes runtime CPU detection and
   how you can work with it.
-* [API](https://simdjson.org/api/0.7.0/annotated.html) contains the automatically generated API documentation.
+* [API](https://simdjson.org/api/0.8.0/annotated.html) contains the automatically generated API documentation.
 
 Performance results
 -------------------
