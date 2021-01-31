@@ -32,7 +32,7 @@ simdjson_really_inline bool equals_expected<const char *, const char *>(const ch
   return !strcmp(actual, expected);
 }
 template<>
-simdjson_really_inline bool equals_expected<simdjson::builtin::ondemand::raw_json_string, const char *>(simdjson::builtin::ondemand::raw_json_string actual, const char * expected) {
+simdjson_really_inline bool equals_expected<simdjson::ondemand::raw_json_string, const char *>(simdjson::ondemand::raw_json_string actual, const char * expected) {
   return actual == expected;
 }
 
@@ -56,7 +56,8 @@ simdjson_really_inline bool assert_success(const T &actual, const char *operatio
 template<typename A, typename E=A>
 simdjson_really_inline bool assert_equal(const A &actual, const E &expected, const char *operation = "result") {
   if (!equals_expected(actual, expected)) {
-    std::cerr << "FAIL: " << operation << " returned " << actual << " (expected " << expected << ")" << std::endl;
+    std::cerr << "FAIL: " << operation << " returned " << actual << " (expected " << expected << ")" << std::flush;
+    std::cerr << std::endl;
     return false;
   }
   return true;
@@ -99,6 +100,5 @@ simdjson_really_inline bool assert_true(bool value, const char *operation = "res
 #define RUN_TEST(ACTUAL)                do { if (!(ACTUAL)) { return false; } } while (0);
 #define TEST_FAIL(MESSAGE)              do { std::cerr << "FAIL: " << (MESSAGE) << std::endl; return false; } while (0);
 #define TEST_SUCCEED()                  do { return true; } while (0);
-
 
 #endif // TEST_MACROS_H
