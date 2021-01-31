@@ -1,3 +1,9 @@
+simdjson (0.8.1-1) UNRELEASED; urgency=medium
+
+  * New upstream version 0.8.1
+
+ -- Mo Zhou <lumin@debian.org>  Sun, 31 Jan 2021 21:41:36 +0800
+
 simdjson (0.7.1-1) unstable; urgency=medium
 
   * New upstream version 0.7.1
