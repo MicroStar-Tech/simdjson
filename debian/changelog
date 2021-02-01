@@ -1,10 +1,10 @@
-simdjson (0.8.1-1) unstable; urgency=medium
+simdjson (0.8.1-1~exp1) experimental; urgency=medium
 
   * New upstream version 0.8.1
   * Bump SOVERSION from 5 -> 7, and reflect the changein install files.
   * Get rid of the symbols control file for arm64 and ppc64el.
 
- -- Mo Zhou <lumin@debian.org>  Mon, 01 Feb 2021 14:34:42 +0800
+ -- Mo Zhou <lumin@debian.org>  Mon, 01 Feb 2021 14:36:44 +0800
 
 simdjson (0.7.1-1) unstable; urgency=medium
 
