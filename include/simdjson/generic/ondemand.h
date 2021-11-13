@@ -14,6 +14,7 @@ using depth_t = int32_t;
 } // namespace SIMDJSON_IMPLEMENTATION
 } // namespace simdjson
 
+#include "simdjson/generic/ondemand/json_type.h"
 #include "simdjson/generic/ondemand/token_position.h"
 #include "simdjson/generic/ondemand/logger.h"
 #include "simdjson/generic/ondemand/raw_json_string.h"
@@ -28,3 +29,5 @@ using depth_t = int32_t;
 #include "simdjson/generic/ondemand/field.h"
 #include "simdjson/generic/ondemand/object.h"
 #include "simdjson/generic/ondemand/parser.h"
+#include "simdjson/generic/ondemand/document_stream.h"
+#include "simdjson/generic/ondemand/serialization.h"

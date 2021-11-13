@@ -632,7 +632,12 @@ We iterate through object instances using `field` instances which represent key-
 is accessible by the `value()` method whereas the key is accessible by the `key()` method.
 The keys are treated differently than values are made available as as special type `raw_json_string`
 which is a lightweight type that is meant to be used on a temporary basis, amost solely for
-direct raw ASCII comparisons (`field.key() == "mykey"`). If you occasionally need to access and store the
+direct raw ASCII comparisons: `key().raw()` provides direct access to the unescaped string.
+You can compare `key()` with unescaped C strings (e.g., `key()=="test"`). It is expected
+that the provided string is a valid JSON string. Importantly,
+the C string must not contain an unescaped quote character (`"`). For speed, the comparison is done byte-by-byte
+without handling the escaped characters.
+If you occasionally need to access and store the
 unescaped key values, you may use the `unescaped_key()` method. Once you have called `unescaped_key()` method,
 neither the `key()` nor the `unescaped_key()` methods should be called: the current field instance
 has no longer a key (that is by design). Like other strings, the resulting `std::string_view` generated
@@ -723,7 +728,6 @@ There are currently additional technical limitations which we expect to resolve 
 
 * The simdjson library offers runtime dispatching which allows you to compile one binary and have it run at full speed on different processors, taking advantage of the specific features of the processor. The On Demand API has limited runtime dispatch support. Under x64 systems, to fully benefit from the On Demand API, we recommend that you compile your code for a specific processor. E.g., if your processor supports AVX2 instructions, you should compile your binary executable with AVX2 instruction support (by using your compiler's commands). If you are sufficiently technically proficient, you can implement runtime dispatching within your application, by compiling your On Demand code for different processors.
 * There is an initial phase which scans the entire document quickly, irrespective of the size of the document. We plan to break this phase into distinct steps for large files in a future release as we have done with other components of our API (e.g., `parse_many`).
-* The On Demand API does not support JSON Pointer. This capability is currently limited to our core API.
 
 ### Applicability of the On Demand Approach
 

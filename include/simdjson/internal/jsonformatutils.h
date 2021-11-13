@@ -2,7 +2,7 @@
 #define SIMDJSON_INTERNAL_JSONFORMATUTILS_H
 
 #include <iomanip>
-#include <iostream>
+#include <ostream>
 #include <sstream>
 
 namespace simdjson {
@@ -46,7 +46,7 @@ inline std::ostream& operator<<(std::ostream& out, const escape_json_string &une
       out << "\\\\";
       break;
     default:
-      if ((unsigned char)unescaped.str[i] <= 0x1F) {
+      if (static_cast<unsigned char>(unescaped.str[i]) <= 0x1F) {
         // TODO can this be done once at the beginning, or will it mess up << char?
         std::ios::fmtflags f(out.flags());
         out << "\\u" << std::hex << std::setw(4) << std::setfill('0') << int(unescaped.str[i]);

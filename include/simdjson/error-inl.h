@@ -45,9 +45,6 @@ namespace internal {
 
 template<typename T>
 simdjson_really_inline void simdjson_result_base<T>::tie(T &value, error_code &error) && noexcept {
-  // on the clang compiler that comes with current macOS (Apple clang version 11.0.0),
-  // tie(width, error) = size["w"].get<uint64_t>();
-  // fails with "error: no viable overloaded '='""
   error = this->second;
   if (!error) {
     value = std::forward<simdjson_result_base<T>>(*this).first;
@@ -99,7 +96,7 @@ simdjson_really_inline const T& simdjson_result_base<T>::value_unsafe() const& n
 
 template<typename T>
 simdjson_really_inline T&& simdjson_result_base<T>::value_unsafe() && noexcept {
-  return std::forward<T>(this->first);;
+  return std::forward<T>(this->first);
 }
 
 template<typename T>

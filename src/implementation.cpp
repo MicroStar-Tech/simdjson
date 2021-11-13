@@ -1,4 +1,4 @@
-#include "simdjson.h"
+#include "simdjson/base.h"
 #include <initializer_list>
 
 namespace simdjson {
@@ -147,7 +147,7 @@ SIMDJSON_DLLIMPORTEXPORT const internal::available_implementation_list available
 SIMDJSON_DLLIMPORTEXPORT internal::atomic_ptr<const implementation> active_implementation{&internal::detect_best_supported_implementation_on_first_use_singleton};
 
 simdjson_warn_unused error_code minify(const char *buf, size_t len, char *dst, size_t &dst_len) noexcept {
-  return active_implementation->minify((const uint8_t *)buf, len, (uint8_t *)dst, dst_len);
+  return active_implementation->minify(reinterpret_cast<const uint8_t *>(buf), len, reinterpret_cast<uint8_t *>(dst), dst_len);
 }
 simdjson_warn_unused bool validate_utf8(const char *buf, size_t len) noexcept {
   return active_implementation->validate_utf8(buf, len);
@@ -155,6 +155,7 @@ simdjson_warn_unused bool validate_utf8(const char *buf, size_t len) noexcept {
 
 const implementation * builtin_implementation() {
   static const implementation * builtin_impl = available_implementations[STRINGIFY(SIMDJSON_BUILTIN_IMPLEMENTATION)];
+  assert(builtin_impl);
   return builtin_impl;
 }
 

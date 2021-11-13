@@ -16,9 +16,8 @@ public:
    */
   simdjson_really_inline object() noexcept = default;
 
-  simdjson_really_inline object_iterator begin() noexcept;
-  simdjson_really_inline object_iterator end() noexcept;
-
+  simdjson_really_inline simdjson_result<object_iterator> begin() noexcept;
+  simdjson_really_inline simdjson_result<object_iterator> end() noexcept;
   /**
    * Look up a field by name on an object (order-sensitive).
    *
@@ -32,9 +31,18 @@ public:
    * double y = obj.find_field("y");
    * double x = obj.find_field("x");
    * ```
+   * If you have multiple fields with a matching key ({"x": 1,  "x": 1}) be mindful
+   * that only one field is returned.
    *
    * **Raw Keys:** The lookup will be done against the *raw* key, and will not unescape keys.
    * e.g. `object["a"]` will match `{ "a": 1 }`, but will *not* match `{ "\u0061": 1 }`.
+   *
+   * You must consume the fields on an object one at a time. A request for a new key
+   * invalidates previous field values: it makes them unsafe. E.g., the array
+   * given by content["bids"].get_array() should not be accessed after you have called
+   * content["asks"].get_array(). You can detect such mistakes by first compiling and running
+   * the code in Debug mode (or with the macro `SIMDJSON_DEVELOPMENT_CHECKS` set to 1): an
+   * OUT_OF_ORDER_ITERATION error is generated.
    *
    * @param key The key to look up.
    * @returns The value of the field, or NO_SUCH_FIELD if the field is not in the object.
@@ -59,6 +67,16 @@ public:
    * Use find_field() if you are sure fields will be in order (or are willing to treat it as if the
    * field wasn't there when they aren't).
    *
+   * If you have multiple fields with a matching key ({"x": 1,  "x": 1}) be mindful
+   * that only one field is returned.
+   *
+   * You must consume the fields on an object one at a time. A request for a new key
+   * invalidates previous field values: it makes them unsafe. E.g., the array
+   * given by content["bids"].get_array() should not be accessed after you have called
+   * content["asks"].get_array(). You can detect such mistakes by first compiling and running
+   * the code in Debug mode (or with the macro `SIMDJSON_DEVELOPMENT_CHECKS` set to 1): an
+   * OUT_OF_ORDER_ITERATION error is generated.
+   *
    * @param key The key to look up.
    * @returns The value of the field, or NO_SUCH_FIELD if the field is not in the object.
    */
@@ -70,10 +88,92 @@ public:
   /** @overload simdjson_really_inline simdjson_result<value> find_field_unordered(std::string_view key) & noexcept; */
   simdjson_really_inline simdjson_result<value> operator[](std::string_view key) && noexcept;
 
+  /**
+   * Get the value associated with the given JSON pointer. We use the RFC 6901
+   * https://tools.ietf.org/html/rfc6901 standard, interpreting the current node
+   * as the root of its own JSON document.
+   *
+   *   ondemand::parser parser;
+   *   auto json = R"({ "foo": { "a": [ 10, 20, 30 ] }})"_padded;
+   *   auto doc = parser.iterate(json);
+   *   doc.at_pointer("/foo/a/1") == 20
+   *
+   * It is allowed for a key to be the empty string:
+   *
+   *   ondemand::parser parser;
+   *   auto json = R"({ "": { "a": [ 10, 20, 30 ] }})"_padded;
+   *   auto doc = parser.iterate(json);
+   *   doc.at_pointer("//a/1") == 20
+   *
+   * Note that at_pointer() called on the document automatically calls the document's rewind
+   * method between each call. It invalidates all previously accessed arrays, objects and values
+   * that have not been consumed. Yet it is not the case when calling at_pointer on an object
+   * instance: there is no rewind and no invalidation.
+   *
+   * You may call at_pointer more than once on an object, but each time the pointer is advanced
+   * to be within the value matched by the key indicated by the JSON pointer query. Thus any preceeding
+   * key (as well as the current key) can no longer be used with following JSON pointer calls.
+   *
+   * Also note that at_pointer() relies on find_field() which implies that we do not unescape keys when matching.
+   *
+   * @return The value associated with the given JSON pointer, or:
+   *         - NO_SUCH_FIELD if a field does not exist in an object
+   *         - INDEX_OUT_OF_BOUNDS if an array index is larger than an array length
+   *         - INCORRECT_TYPE if a non-integer is used to access an array
+   *         - INVALID_JSON_POINTER if the JSON pointer is invalid and cannot be parsed
+   */
+  inline simdjson_result<value> at_pointer(std::string_view json_pointer) noexcept;
+
+  /**
+   * Reset the iterator so that we are pointing back at the
+   * beginning of the object. You should still consume values only once even if you
+   * can iterate through the object more than once. If you unescape a string within
+   * the object more than once, you have unsafe code. Note that rewinding an object
+   * means that you may need to reparse it anew: it is not a free operation.
+   *
+   * @returns true if the object contains some elements (not empty)
+   */
+  inline simdjson_result<bool> reset() & noexcept;
+  /**
+   * This method scans the beginning of the object and checks whether the
+   * object is empty.
+   * The runtime complexity is constant time. After
+   * calling this function, if successful, the object is 'rewinded' at its
+   * beginning as if it had never been accessed. If the JSON is malformed (e.g.,
+   * there is a missing comma), then an error is returned and it is no longer
+   * safe to continue.
+   */
+  inline simdjson_result<bool> is_empty() & noexcept;
+  /**
+   * This method scans the object and counts the number of key-value pairs.
+   * The count_fields method should always be called before you have begun
+   * iterating through the object: it is expected that you are pointing at
+   * the beginning of the object.
+   * The runtime complexity is linear in the size of the object. After
+   * calling this function, if successful, the object is 'rewinded' at its
+   * beginning as if it had never been accessed. If the JSON is malformed (e.g.,
+   * there is a missing comma), then an error is returned and it is no longer
+   * safe to continue.
+   *
+   * To check that an object is empty, it is more performant to use
+   * the is_empty() method.
+   */
+  simdjson_really_inline simdjson_result<size_t> count_fields() & noexcept;
+  /**
+   * Consumes the object and returns a string_view instance corresponding to the
+   * object as represented in JSON. It points inside the original byte array containg
+   * the JSON document.
+   */
+  simdjson_really_inline simdjson_result<std::string_view> raw_json() noexcept;
+
 protected:
+  /**
+   * Go to the end of the object, no matter where you are right now.
+   */
+  simdjson_really_inline error_code consume() noexcept;
   static simdjson_really_inline simdjson_result<object> start(value_iterator &iter) noexcept;
-  static simdjson_really_inline simdjson_result<object> try_start(value_iterator &iter) noexcept;
-  static simdjson_really_inline object started(value_iterator &iter) noexcept;
+  static simdjson_really_inline simdjson_result<object> start_root(value_iterator &iter) noexcept;
+  static simdjson_really_inline simdjson_result<object> started(value_iterator &iter) noexcept;
   static simdjson_really_inline object resume(const value_iterator &iter) noexcept;
   simdjson_really_inline object(const value_iterator &iter) noexcept;
 
@@ -107,6 +207,11 @@ public:
   simdjson_really_inline simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::value> find_field_unordered(std::string_view key) && noexcept;
   simdjson_really_inline simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::value> operator[](std::string_view key) & noexcept;
   simdjson_really_inline simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::value> operator[](std::string_view key) && noexcept;
+  simdjson_really_inline simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::value> at_pointer(std::string_view json_pointer) noexcept;
+  inline simdjson_result<bool> reset() noexcept;
+  inline simdjson_result<bool> is_empty() noexcept;
+  inline simdjson_result<size_t> count_fields() & noexcept;
+
 };
 
 } // namespace simdjson

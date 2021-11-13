@@ -18,7 +18,7 @@ The fuzzers are used in several ways.
 * oss-fuzz - heavy duty 24/7 fuzzing provided by the google driven oss-fuzz project
 
 ## Local fuzzing
-Just invoke fuzz/quick_check.sh, it will download the latest corpus from bintray (kept up to date by the CI fuzzers) and run the fuzzers for a short time. In case you want to run the fuzzers for longer, modify the timeout value in the script or invoke the fuzzer directly.
+Just invoke fuzz/quick_check.sh, it will download the latest corpus (kept up to date by the CI fuzzers) and run the fuzzers for a short time. In case you want to run the fuzzers for longer, modify the timeout value in the script or invoke the fuzzer directly.
 
 This requires linux with clang and cmake installed (recent Debian and Ubuntu are known to work fine).
 
@@ -45,6 +45,9 @@ The corpus will grow over time and easy to find bugs will be detected already du
 ## Fuzzing as a CI job - arm64
 There is also a job running the fuzzers on arm64 (see .drone.yml) to make sure also the arm specific parts are fuzzed. This does not update the corpus, it just reuses what the x64 job finds.
 
+## Fuzzing as a CI job - power
+There is a fuzzing job similar to the arm64 one. It takes the corpus from the x64 fuzzer as a starting point and fuzzes it for a short while. See the "short fuzz on the power arch" github action job.
+
 ## Fuzzing on oss-fuzz
 The simdjson library is continuously fuzzed on [oss-fuzz](https://github.com/google/oss-fuzz). In case a bug is found, the offending input is minimized and tested for reproducibility. A report with the details is automatically filed, and the contact persons at simdjson are notified via email. An issue is opened at the oss-fuzz bugtracker with restricted view access. When the bug is fixed, the issue is automatically closed.
 
@@ -64,9 +67,9 @@ As little code as possible is kept at oss-fuzz since it is inconvenient to chang
 
 ## Corpus
 
-The simdjson library does not benefit from a corpus as much as other projects, because the library is very fast and explores the input space very well. With that said, it is still beneficial to have one. The CI job stores the corpus on bintray between runs, and is available at [bintray](https://dl.bintray.com/pauldreik/simdjson-fuzz-corpus/corpus/corpus.tar).
+The simdjson library does not benefit from a corpus as much as other projects, because the library is very fast and explores the input space very well. With that said, it is still beneficial to have one. The CI job stores the corpus on a remote server between runs, and is available at [www.pauldreik.se](https://readonly:readonly@www.pauldreik.se/fuzzdata/index.php?project=simdjson).
 
-One can also grab the corpus as an artifact from the github actions job. Pick a run, then go to artifacts and download.
+One can also grab the corpus as an artifact from the github actions job if you are logged in at github. Pick a run, then go to artifacts and download.
 
 ## Fuzzing coverage
 

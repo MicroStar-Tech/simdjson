@@ -13,19 +13,19 @@ using namespace simd;
 struct json_character_block {
   static simdjson_really_inline json_character_block classify(const simd::simd8x64<uint8_t>& in);
   //  ASCII white-space ('\r','\n','\t',' ')
-  simdjson_really_inline uint64_t whitespace() const;
+  simdjson_really_inline uint64_t whitespace() const noexcept;
   // non-quote structural characters (comma, colon, braces, brackets)
-  simdjson_really_inline uint64_t op() const;
+  simdjson_really_inline uint64_t op() const noexcept;
   // neither a structural character nor a white-space, so letters, numbers and quotes
-  simdjson_really_inline uint64_t scalar() const;
+  simdjson_really_inline uint64_t scalar() const noexcept;
 
   uint64_t _whitespace; // ASCII white-space ('\r','\n','\t',' ')
   uint64_t _op; // structural characters (comma, colon, braces, brackets but not quotes)
 };
 
-simdjson_really_inline uint64_t json_character_block::whitespace() const { return _whitespace; }
-simdjson_really_inline uint64_t json_character_block::op() const { return _op; }
-simdjson_really_inline uint64_t json_character_block::scalar() const { return ~(op() | whitespace()); }
+simdjson_really_inline uint64_t json_character_block::whitespace() const noexcept { return _whitespace; }
+simdjson_really_inline uint64_t json_character_block::op() const noexcept { return _op; }
+simdjson_really_inline uint64_t json_character_block::scalar() const noexcept { return ~(op() | whitespace()); }
 
 // This identifies structural characters (comma, colon, braces, brackets),
 // and ASCII white-space ('\r','\n','\t',' ').
@@ -134,7 +134,7 @@ simdjson_warn_unused error_code implementation::minify(const uint8_t *buf, size_
   return haswell::stage1::json_minifier::minify<128>(buf, len, dst, dst_len);
 }
 
-simdjson_warn_unused error_code dom_parser_implementation::stage1(const uint8_t *_buf, size_t _len, bool streaming) noexcept {
+simdjson_warn_unused error_code dom_parser_implementation::stage1(const uint8_t *_buf, size_t _len, stage1_mode streaming) noexcept {
   this->buf = _buf;
   this->len = _len;
   return haswell::stage1::json_structural_indexer::index<128>(_buf, _len, *this, streaming);
@@ -153,7 +153,7 @@ simdjson_warn_unused error_code dom_parser_implementation::stage2_next(dom::docu
 }
 
 simdjson_warn_unused error_code dom_parser_implementation::parse(const uint8_t *_buf, size_t _len, dom::document &_doc) noexcept {
-  auto error = stage1(_buf, _len, false);
+  auto error = stage1(_buf, _len, stage1_mode::regular);
   if (error) { return error; }
   return stage2(_doc);
 }

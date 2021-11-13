@@ -20,14 +20,15 @@ static simdjson_really_inline uint32_t parse_eight_digits_unrolled(const char *c
   return uint32_t((val & 0x0000FFFF0000FFFF) * 42949672960001 >> 32);
 }
 static simdjson_really_inline uint32_t parse_eight_digits_unrolled(const uint8_t *chars) {
-  return parse_eight_digits_unrolled((const char *)chars);
+  return parse_eight_digits_unrolled(reinterpret_cast<const char *>(chars));
 }
 
 } // unnamed namespace
 } // namespace SIMDJSON_IMPLEMENTATION
 } // namespace simdjson
 
-#define SWAR_NUMBER_PARSING
+#define SIMDJSON_SWAR_NUMBER_PARSING 1
+
 #include "simdjson/generic/numberparsing.h"
 
 #endif // SIMDJSON_FALLBACK_NUMBERPARSING_H

@@ -1,3 +1,4 @@
+#include "simdjson/generic/ondemand/json_type-inl.h"
 #include "simdjson/generic/ondemand/logger-inl.h"
 #include "simdjson/generic/ondemand/raw_json_string-inl.h"
 #include "simdjson/generic/ondemand/token_iterator-inl.h"
@@ -11,3 +12,5 @@
 #include "simdjson/generic/ondemand/field-inl.h"
 #include "simdjson/generic/ondemand/object-inl.h"
 #include "simdjson/generic/ondemand/parser-inl.h"
+#include "simdjson/generic/ondemand/document_stream-inl.h"
+#include "simdjson/generic/ondemand/serialization-inl.h"
