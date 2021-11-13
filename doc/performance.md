@@ -5,15 +5,12 @@ simdjson strives to be at its fastest *without tuning*, and generally achieves t
 are still some scenarios where tuning can enhance performance.
 
 * [Reusing the parser for maximum efficiency](#reusing-the-parser-for-maximum-efficiency)
-  * [Keeping documents around for longer](#keeping-documents-around-for-longer)
+* [Reusing string buffers](#reusing-string-buffers)
 * [Server Loops: Long-Running Processes and Memory Capacity](#server-loops-long-running-processes-and-memory-capacity)
 * [Large files and huge page support](#large-files-and-huge-page-support)
 * [Number parsing](#number-parsing)
 * [Visual Studio](#visual-studio)
-* [Downclocking](#downclocking)
-* [Best Use of the DOM API](#best-use-of-the-dom-api)
-* [Padding and Temporary Copies](#padding-and-temporary-copies)
-
+* [Power Usage and Downclocking](#power-usage-and-downclocking)
 
 Reusing the parser for maximum efficiency
 -----------------------------------------
@@ -24,77 +21,77 @@ buffers hot in cache and keeping memory allocation and initialization to a minim
 you can parse terabytes of JSON data without doing any new allocation.
 
 ```c++
-dom::parser parser;
+ondemand::parser parser;
 
-// This initializes buffers and a document big enough to handle this JSON.
-dom::element doc = parser.parse("[ true, false ]"_padded);
-cout << doc << endl;
+// This initializes buffers  big enough to handle this JSON.
+auto json = "[ true, false ]"_padded;
+auto doc = parser.iterate(json);
+for(bool i : doc.get_array()) {
+  cout << i << endl;
+}
 
-// This reuses the existing buffers, and reuses and *overwrites* the old document
-doc = parser.parse("[1, 2, 3]"_padded);
-cout << doc << endl;
-
-// This also reuses the existing buffers, and reuses and *overwrites* the old document
-dom::element doc2 = parser.parse("true"_padded);
-// Even if you keep the old reference around, doc and doc2 refer to the same document.
-cout << doc << endl;
-cout << doc2 << endl;
+// This reuses the existing buffers
+auto number_json = "[1, 2, 3]"_padded;
+doc = parser.iterate(number_json);
+for(int64_t i : doc.get_array()) {
+  cout << i << endl;
+}
 ```
 
-It's not just internal buffers though. The simdjson library reuses the document itself. The dom::element, dom::object and dom::array instances are *references* to the internal document.
-You are only *borrowing* the document from simdjson, which purposely reuses and overwrites it each
-time you call parse. This prevent wasteful and unnecessary memory allocation in 99% of cases where
-JSON is just read, used, and converted to native values or thrown away.
 
-> **You are only borrowing the document from the simdjson parser. Don't keep it long term!**
+Reusing string buffers
+-----------------------------------------
 
-This is key: don't keep the `document&`, `dom::element`, `dom::array`, `dom::object`
-or `string_view` objects you get back from the API. Convert them to C++ native values, structs and
-arrays that you own.
+We recommend against creating many `std::string` or `simdjson::padded_string` instances to store the JSON content in your application. [Creating many non-trivial objects is convenient but often surprisingly slow](https://lemire.me/blog/2020/08/08/performance-tip-constructing-many-non-trivial-objects-is-slow/). Instead, as much as possible, you should allocate (once or a few times) reusable memory buffers where you write your JSON content. If you have a buffer `json_str` (of type `char*`) allocated for  `capacity` bytes and you store a JSON document spanning `length` bytes, you can pass it to simdjson as follows:
+
+```c++
+ auto doc = parser.iterate(padded_string_view(json_str, length, capacity));
+```
+
+or simply
+
+
+```c++
+ auto doc = parser.iterate(json_str, length, capacity);
+```
+
 
 Server Loops: Long-Running Processes and Memory Capacity
---------------------------------------------------------
+---------------------------------
 
-The simdjson library automatically expands its memory capacity when larger documents are parsed, so
-that you don't unexpectedly fail. In a short process that reads a bunch of files and then exits,
-this works pretty flawlessly.
+The On Demand approach also automatically expands its memory capacity when larger documents are parsed. However, for longer processes where very large files are processed (such as server loops), this capacity is not resized down. On Demand also lets you adjust the maximal capacity that the parser can process:
 
-Server loops, though, are long-running processes that will keep the parser around forever. This
-means that if you encounter a really, really large document, simdjson will not resize back down.
-The simdjson library lets you adjust your allocation strategy to prevent your server from growing
-without bound:
+* You can set an upper bound (*max_capacity*) when construction the parser:
+```C++
+    ondemand::parser parser(1000*1000);  // Never grows past documents > 1 MB
+    auto doc = parser.iterate(json);
+    for (web_request request : listen()) {
+      padded_string json;
+      padded_string json = padded_string::load(request.body);
+      auto error = parser.iterate(json);
+      // If the document was above our limit, emit 413 = payload too large
+      if (error == CAPACITY) { request.respond(413); continue; }
+      // ...
+    }
+```
 
-* You can set a *max capacity* when constructing a parser:
+The capacity will grow as the parser encounters larger documents up to 1 MB.
 
-  ```c++
-  dom::parser parser(1000*1000); // Never grow past documents > 1MB
-  for (web_request request : listen()) {
-    dom::element doc;
-    auto error = parser.parse(request.body).get(doc);
-    // If the document was above our limit, emit 413 = payload too large
-    if (error == CAPACITY) { request.respond(413); continue; }
-    // ...
-  }
-  ```
-
-  This parser will grow normally as it encounters larger documents, but will never pass 1MB.
-
-* You can set a *fixed capacity* that never grows, as well, which can be excellent for
-  predictability and reliability, since simdjson will never call malloc after startup!
-
-  ```c++
-  dom::parser parser(0); // This parser will refuse to automatically grow capacity
-  auto error = parser.allocate(1000*1000); // This allocates enough capacity to handle documents <= 1MB
-  if (error) { cerr << error << endl; exit(1); }
-
-  for (web_request request : listen()) {
-    dom::element doc;
-    error = parser.parse(request.body).get(doc);
-    // If the document was above our limit, emit 413 = payload too large
-    if (error == CAPACITY) { request.respond(413); continue; }
-    // ...
-  }
-  ```
+* You can also allocate a *fixed capacity* that will never grow:
+```C++
+    ondemand::parser parser(1000*1000);
+    parser.allocate(1000*1000)  // Fix the capacity to 1 MB
+    auto doc = parser.iterate(json);
+    for (web_request request : listen()) {
+      padded_string json;
+      padded_string json = padded_string::load(request.body);
+      auto error = parser.iterate(json);
+      // If the document was above our limit, emit 413 = payload too large
+      if (error == CAPACITY) { request.respond(413); continue; }
+      // ...
+    }
+```
+You can also manually set the maximal capacity using the method `set_max_capacity()`.
 
 Large files and huge page support
 ---------------------------------
@@ -150,19 +147,15 @@ Recent versions of Microsoft Visual Studio on Windows provides support for the L
 Under Windows, we also support the GNU GCC compiler via MSYS2. The performance of 64-bit MSYS2 under Windows excellent (on par with Linux).
 
 
-Downclocking
+Power Usage and Downclocking
 --------------
 
-
-
-SIMD instructions are the public transportation of computing. Instead of using 4 distinct instructions to add numbers, you can replace them with a single instruction that does the same work. Though the one instruction is slightly more expensive, the energy used per unit of work is much less with SIMD. If you can increase your speed using SIMD instructions (NEON, SSE, AVX), you should expect to reduce your power usage.
+The simdjson library relies on SIMD instructions. SIMD instructions are the public transportation of computing. Instead of using 4 distinct instructions to add numbers, you can replace them with a single instruction that does the same work. Though the one instruction is slightly more expensive, the energy used per unit of work is much less with SIMD. If you can increase your speed using SIMD instructions (NEON, SSE, AVX), you should expect to reduce your power usage.
 
 The SIMD instructions that simdjson relies upon (SSE and AVX under x64, NEON under ARM, ALTIVEC under PPC) are routinely part of runtime libraries (e.g., [Go](https://golang.org/src/runtime/memmove_amd64.s), [Glibc](https://github.com/ihtsae/glibc/commit/5f3d0b78e011d2a72f9e88b0e9ef5bc081d18f97), [LLVM](https://github.com/llvm/llvm-project/blob/96f3ea0d21b48ca088355db10d4d1a2e9bc9f884/lldb/tools/debugserver/source/MacOSX/i386/DNBArchImplI386.cpp), [Rust](https://github.com/rust-lang/rust/commit/070fad1701fb36b112853b0a6a9787a7bb7ff34c), [Java](http://hg.openjdk.java.net/jdk8u/jdk8u/hotspot/file/c1374141598c/src/cpu/x86/vm/stubGenerator_x86_64.cpp#l1297), [PHP](https://github.com/php/php-src/blob/e5cb53ec68603d4dbdd780fd3ecfca943b4fd383/ext/standard/string.c)). What distinguishes the simdjson library is that it is built from the ground up to benefit from these instructions.
 
 
-You should not expect the simdjson library to cause *downclocking* of your recent Intel CPU cores.
-
-On some Intel processors, using SIMD instructions in a sustained manner on the same CPU core may result in a phenomenon called downclocking whereas the processor initially runs these instructions at a slow speed before reducing the frequency of the core for a short time (milliseconds). Intel refers to these states as licenses. On some current Intel processors, it occurs under two scenarios:
+You should not expect the simdjson library to cause *downclocking* of your recent Intel CPU cores. On some Intel processors, using SIMD instructions in a sustained manner on the same CPU core may result in a phenomenon called downclocking whereas the processor initially runs these instructions at a slow speed before reducing the frequency of the core for a short time (milliseconds). Intel refers to these states as licenses. On some current Intel processors, it occurs under two scenarios:
 
 - [Whenever 512-bit AVX-512 instructions are used](https://lemire.me/blog/2018/09/07/avx-512-when-and-how-to-use-these-new-instructions/).
 - Whenever heavy 256-bit or wider instructions are used. Heavy instructions are those involving floating point operations or integer multiplications (since these execute on the floating point unit).
@@ -170,31 +163,3 @@ On some Intel processors, using SIMD instructions in a sustained manner on the s
 The simdjson library does not currently support AVX-512 instructions and it does not make use of heavy 256-bit instructions. We do use vectorized multiplications, but only using 128-bit registers. Thus there should be no downclocking due to simdjson on recent processors.
 
 You may still be worried about which SIMD instruction set is used by simdjson.  Thankfully,  [you can always determine and change which architecture-specific implementation is used](implementation-selection.md) by simdjson. Thus even if your CPU supports AVX2, you do not need to use AVX2. You are in control.
-
-Best Use of the DOM API
--------------------------
-
-The simdjson API provides access to the JSON DOM (document-object-model) content as a tree of `dom::element` instances, each representing an object, an array or an atomic type (null, true, false, number). These `dom::element` instances are lightweight objects (e.g., spanning 16 bytes) and it might be advantageous to pass them by value, as opposed to passing them by reference or by pointer.
-
-Padding and Temporary Copies
---------------
-
-The simdjson function `parser.parse` reads data from a padded  buffer, containing SIMDJSON_PADDING extra bytes added at the end.
-If you are passing a `padded_string` to `parser.parse` or loading the JSON directly from
-disk (`parser.load`), padding is automatically  handled.
-When calling `parser.parse` on a pointer (e.g., `parser.parse(my_char_pointer, my_length_in_bytes)`) a temporary copy  is made by default with adequate padding and you, again, do not need to be concerned with padding.
-
-Some users may not be able use our `padded_string` class or to load the data directly from disk (`parser.load`). They may need to pass data pointers to the library.  If these users wish to avoid temporary copies and corresponding temporary memory allocations, they may want to call `parser.parse` with the `realloc_if_needed` parameter set to false (e.g., `parser.parse(my_char_pointer, my_length_in_bytes, false)`). In such cases, they need to ensure that there are at least SIMDJSON_PADDING extra bytes at the end that can be safely accessed and read. They do not need to initialize the padded bytes to any value in particular. The following example is safe:
-
-
-```C++
-const char *json      = R"({"key":"value"})";
-const size_t json_len = std::strlen(json);
-std::unique_ptr<char[]> padded_json_copy{new char[json_len + SIMDJSON_PADDING]};
-memcpy(padded_json_copy.get(), json, json_len);
-memset(padded_json_copy.get() + json_len, 0, SIMDJSON_PADDING);
-simdjson::dom::parser parser;
-simdjson::dom::element element = parser.parse(padded_json_copy.get(), json_len, false);
-````
-
-Setting the `realloc_if_needed` parameter `false` in this manner may lead to better performance since copies are avoided, but it requires that the user takes more responsibilities: the simdjson library cannot verify that the input buffer was padded with SIMDJSON_PADDING extra bytes.

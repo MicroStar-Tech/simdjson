@@ -4,13 +4,14 @@
 #include "simdjson/portability.h"
 #include "simdjson/common_defs.h" // for SIMDJSON_PADDING
 #include "simdjson/error.h"
-
 #include <cstring>
 #include <memory>
 #include <string>
 #include <ostream>
 
 namespace simdjson {
+
+class padded_string_view;
 
 /**
  * String with extra allocation for ease of use with parser::parse()
@@ -98,11 +99,19 @@ struct padded_string final {
   operator std::string_view() const;
 
   /**
+   * Create a padded_string_view with the same content.
+   */
+  operator padded_string_view() const noexcept;
+
+  /**
    * Load this padded string from a file.
+   *
+   * @return IO_ERROR on error. Be mindful that on some 32-bit systems,
+   * the file size might be limited to 2 GB.
    *
    * @param path the path to the file.
    **/
-  inline static simdjson_result<padded_string> load(const std::string &path) noexcept;
+  inline static simdjson_result<padded_string> load(std::string_view path) noexcept;
 
 private:
   padded_string &operator=(const padded_string &o) = delete;

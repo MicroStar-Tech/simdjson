@@ -1,6 +1,11 @@
-option(ENABLE_FUZZING "enable building the fuzzers" ON)
+if(NOT SIMDJSON_LEGACY_VISUAL_STUDIO AND NOT SIMDJSON_WINDOWS_DLL)
+  option(SIMDJSON_ENABLE_FUZZING "enable building the fuzzers" ON)
+else()
+  option(SIMDJSON_ENABLE_FUZZING "enable building the fuzzers" OFF)
+endif()
 
-if(ENABLE_FUZZING)
+
+if(SIMDJSON_ENABLE_FUZZING)
 
   # First attempt at a fuzzer, using libFuzzer.
   #
@@ -12,7 +17,7 @@ if(ENABLE_FUZZING)
   # export CFLAGS="-fsanitize=fuzzer-no-link,address,undefined"
   # export CXX=clang++
   # export CC=clang++
-  # cmake .. -GNinja -DCMAKE_BUILD_TYPE=Debug -DENABLE_FUZZING=On -DSIMDJSON_FUZZ_LINKMAIN=Off -DSIMDJSON_FUZZ_LDFLAGS=-fsanitize=fuzzer
+  # cmake .. -GNinja -DCMAKE_BUILD_TYPE=Debug -DSIMDJSON_ENABLE_FUZZING=On -DSIMDJSON_FUZZ_LINKMAIN=Off -DSIMDJSON_FUZZ_LDFLAGS=-fsanitize=fuzzer
   # ninja
 
   # settings this links in a main. useful for reproducing,
@@ -20,7 +25,7 @@ if(ENABLE_FUZZING)
   # (note that libFuzzer can also reproduce, just pass it the files)
   #
   # Using this by default, means the fuzzers will be built as a part of the normal
-  # workflow, meaning they wont bitrot and will participate in refactoring etc.
+  # workflow, meaning they won't bitrot and will participate in refactoring etc.
   #
   option(SIMDJSON_FUZZ_LINKMAIN "links a main into fuzz targets for building reproducers" On)
 
@@ -30,11 +35,10 @@ if(ENABLE_FUZZING)
 
   # Fuzzer build flags and libraries
   add_library(simdjson-fuzzer INTERFACE)
+  target_link_libraries(simdjson-fuzzer INTERFACE simdjson)
   if (SIMDJSON_FUZZ_LINKMAIN)
-    target_link_libraries(simdjson-fuzzer INTERFACE simdjson-source)
     target_sources(simdjson-fuzzer INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>/main.cpp)
   else ()
-    target_link_libraries(simdjson-fuzzer INTERFACE simdjson)
     target_link_libraries(simdjson-fuzzer INTERFACE ${SIMDJSON_FUZZ_LDFLAGS})
   endif ()
   target_link_libraries(simdjson-fuzzer INTERFACE simdjson-internal-flags)

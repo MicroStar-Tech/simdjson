@@ -46,13 +46,13 @@ if (Python3_Interpreter_FOUND AND (NOT WIN32))
 
   ##
   # This is used by "make amalgamate" to update the original source files.
-  # You can invoke it as cmake --build . --target amalgamate 
+  # You can invoke it as cmake --build . --target amalgamate
   # We obviously don't do
   # this if source and generated files are in the same place--cmake gets mad!
   if (NOT (${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_BINARY_DIR}))
     add_custom_target(amalgamate)
     add_custom_command(TARGET amalgamate
-      # We don't want CMake to know that it is writing to the source directory. No magic  
+      # We don't want CMake to know that it is writing to the source directory. No magic
       # file regeneration in the source directory without the user's knowledge.
       # OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/simdjson.cpp ${CMAKE_CURRENT_SOURCE_DIR}/simdjson.h ${CMAKE_CURRENT_SOURCE_DIR}/amalgamate_demo.cpp ${CMAKE_CURRENT_SOURCE_DIR}/README.md
       COMMAND ${CMAKE_COMMAND} -E copy ${SINGLEHEADER_FILES} ${CMAKE_CURRENT_SOURCE_DIR}
@@ -87,6 +87,9 @@ else()
 
 endif()
 
+add_custom_target(singleheader_tests)
+add_dependencies(all_tests singleheader_tests)
+
 #
 # Do not depend on singleheader files directly: depend on this target instead.
 # Otherwise the custom command may get triggered multiple times and race with itself!
@@ -117,18 +120,33 @@ target_link_libraries(simdjson-singleheader-source INTERFACE simdjson-singlehead
 
 include(${PROJECT_SOURCE_DIR}/cmake/add_compile_only_test.cmake)
 
+
 #
 # Test the generated simdjson.cpp/simdjson.h using the generated amalgamate_demo.cpp
 #
-add_executable(amalgamate_demo $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/amalgamate_demo.cpp>)
-target_link_libraries(amalgamate_demo simdjson-singleheader-include-source simdjson-internal-flags)
-add_test(amalgamate_demo amalgamate_demo ${EXAMPLE_JSON} ${EXAMPLE_NDJSON})
+# Under Windows you should not mix static and dynamic. Pick one. The following test is static.
+if(NOT SIMDJSON_LEGACY_VISUAL_STUDIO AND NOT SIMDJSON_WINDOWS_DLL)
+  add_executable(amalgamate_demo $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/amalgamate_demo.cpp>)
+  target_link_libraries(amalgamate_demo simdjson-singleheader-include-source simdjson-internal-flags)
+  add_test(amalgamate_demo amalgamate_demo ${EXAMPLE_JSON} ${EXAMPLE_NDJSON})
+  set_property(TEST amalgamate_demo APPEND PROPERTY LABELS per_implementation singleheader)
+  add_dependencies(singleheader_tests amalgamate_demo)
+  MESSAGE( STATUS "Including amalgamate_demo test. ${SIMDJSON_WINDOWS_DLL}" )
+else()
+  MESSAGE( STATUS "You either have an old Visual Studio or you are building a DLL, amalgamate_demo test disabled." )
+endif()
 
-install(FILES simdjson.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-
-add_library(simdjson-singleheader STATIC "")
-target_link_libraries(simdjson-singleheader simdjson-singleheader-source simdjson-internal-flags)
-add_compile_only_test(simdjson-singleheader)
+# Under Windows you should not mix static and dynamic. Pick one. The following test is static.
+if(NOT SIMDJSON_LEGACY_VISUAL_STUDIO AND NOT SIMDJSON_WINDOWS_DLL)
+  add_library(simdjson-singleheader STATIC "")
+  target_link_libraries(simdjson-singleheader simdjson-singleheader-source simdjson-internal-flags)
+  add_compile_only_test(simdjson-singleheader)
+  set_property(TEST simdjson-singleheader APPEND PROPERTY LABELS per_implementation singleheader)
+  add_dependencies(singleheader_tests simdjson-singleheader)
+  MESSAGE( STATUS "Including simdjson-singleheader test." )
+else()
+  MESSAGE( STATUS "You either have an old Visual Studio or you are building a DLL, simdjson-singleheader test disabled." )
+endif()
 
 #
 # Test the existing simdjson.cpp/simdjson.h using the existing amalgamate_demo.cpp, using
@@ -145,8 +163,17 @@ if (NOT (${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_BINARY_DIR}))
   target_sources(simdjson-singleheader-source-direct-from-repository INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
   target_link_libraries(simdjson-singleheader-source-direct-from-repository INTERFACE simdjson-singleheader-include-source-direct-from-repository)
 
-  add_executable(amalgamate_demo_direct_from_repository ${CMAKE_CURRENT_SOURCE_DIR}/amalgamate_demo.cpp)
-  target_link_libraries(amalgamate_demo_direct_from_repository simdjson-singleheader-include-source-direct-from-repository simdjson-internal-flags)
-  add_test(amalgamate_demo_direct_from_repository amalgamate_demo_direct_from_repository ${EXAMPLE_JSON} ${EXAMPLE_NDJSON})
-
+  # If you want to use simdjson as a DLL under Windows, it makes little sense to run the following static test. Furthermore
+  # when a DLL was built, we pass SIMDJSON_USING_WINDOWS_DYNAMIC_LIBRARY=1 within the simdjson-flags so that static compilation
+  # breaks. Simply put: under Windows you should not mix static and dynamic. Pick one.
+  if(NOT SIMDJSON_LEGACY_VISUAL_STUDIO AND NOT SIMDJSON_WINDOWS_DLL)
+    add_executable(amalgamate_demo_direct_from_repository ${CMAKE_CURRENT_SOURCE_DIR}/amalgamate_demo.cpp)
+    target_link_libraries(amalgamate_demo_direct_from_repository simdjson-singleheader-include-source-direct-from-repository simdjson-internal-flags)
+    add_test(amalgamate_demo_direct_from_repository amalgamate_demo_direct_from_repository ${EXAMPLE_JSON} ${EXAMPLE_NDJSON})
+    set_property(TEST amalgamate_demo_direct_from_repository APPEND PROPERTY LABELS per_implementation singleheader)
+    add_dependencies(singleheader_tests amalgamate_demo_direct_from_repository)
+    MESSAGE( STATUS "Including amalgamate_demo_direct_from_repository test." )
+  else()
+    MESSAGE( STATUS "You either have an old Visual Studio or you are building a DLL, amalgamate_demo test disabled." )
+  endif()
 endif()

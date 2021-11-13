@@ -1,7 +1,7 @@
 #ifndef SIMDJSON_PPC64_SIMD_H
 #define SIMDJSON_PPC64_SIMD_H
 
-#include "simdjson.h"
+#include "simdjson/base.h"
 #include "simdjson/internal/simdprune_tables.h"
 #include "simdjson/ppc64/bitmanipulation.h"
 #include <type_traits>
@@ -42,17 +42,17 @@ template <typename Child> struct base {
     return vec_andc(this->value, (__m128i)other);
   }
   simdjson_really_inline Child &operator|=(const Child other) {
-    auto this_cast = (Child *)this;
+    auto this_cast = static_cast<Child*>(this);
     *this_cast = *this_cast | other;
     return *this_cast;
   }
   simdjson_really_inline Child &operator&=(const Child other) {
-    auto this_cast = (Child *)this;
+    auto this_cast = static_cast<Child*>(this);
     *this_cast = *this_cast & other;
     return *this_cast;
   }
   simdjson_really_inline Child &operator^=(const Child other) {
-    auto this_cast = (Child *)this;
+    auto this_cast = static_cast<Child*>(this);
     *this_cast = *this_cast ^ other;
     return *this_cast;
   }
@@ -131,7 +131,7 @@ template <typename T> struct base8_numeric : base8<T> {
   }
   static simdjson_really_inline simd8<T> zero() { return splat(0); }
   static simdjson_really_inline simd8<T> load(const T values[16]) {
-    return (__m128i)(vec_vsx_ld(0, (const uint8_t *)values));
+    return (__m128i)(vec_vsx_ld(0, reinterpret_cast<const uint8_t *>(values)));
   }
   // Repeat 16 values as many times as necessary (usually for lookup tables)
   static simdjson_really_inline simd8<T> repeat_16(T v0, T v1, T v2, T v3, T v4,
@@ -163,11 +163,11 @@ template <typename T> struct base8_numeric : base8<T> {
   }
   simdjson_really_inline simd8<T> &operator+=(const simd8<T> other) {
     *this = *this + other;
-    return *(simd8<T> *)this;
+    return *static_cast<simd8<T> *>(this);
   }
   simdjson_really_inline simd8<T> &operator-=(const simd8<T> other) {
     *this = *this - other;
-    return *(simd8<T> *)this;
+    return *static_cast<simd8<T> *>(this);
   }
 
   // Perform a lookup assuming the value is between 0 and 16 (undefined behavior
@@ -217,9 +217,9 @@ template <typename T> struct base8_numeric : base8<T> {
     // it fills in with the bytes from the second 8 bytes + some filling
     // at the end.
     __m128i compactmask =
-        vec_vsx_ld(0, (const uint8_t *)(pshufb_combine_table + pop1 * 8));
+        vec_vsx_ld(0, reinterpret_cast<const uint8_t *>(pshufb_combine_table + pop1 * 8));
     __m128i answer = vec_perm(pruned, (__m128i)vec_splats(0), compactmask);
-    vec_vsx_st(answer, 0, (__m128i *)(output));
+    vec_vsx_st(answer, 0, reinterpret_cast<__m128i *>(output));
   }
 
   template <typename L>
@@ -400,7 +400,7 @@ template <typename T> struct simd8x64 {
 
   simd8x64(const simd8x64<T> &o) = delete; // no copy allowed
   simd8x64<T> &
-  operator=(const simd8<T> other) = delete; // no assignment allowed
+  operator=(const simd8<T>& other) = delete; // no assignment allowed
   simd8x64() = delete;                      // no default constructor allowed
 
   simdjson_really_inline simd8x64(const simd8<T> chunk0, const simd8<T> chunk1,
@@ -422,7 +422,7 @@ template <typename T> struct simd8x64 {
            (this->chunks[2] | this->chunks[3]);
   }
 
-  simdjson_really_inline void compress(uint64_t mask, T *output) const {
+  simdjson_really_inline uint64_t compress(uint64_t mask, T *output) const {
     this->chunks[0].compress(uint16_t(mask), output);
     this->chunks[1].compress(uint16_t(mask >> 16),
                              output + 16 - count_ones(mask & 0xFFFF));
@@ -430,6 +430,7 @@ template <typename T> struct simd8x64 {
                              output + 32 - count_ones(mask & 0xFFFFFFFF));
     this->chunks[3].compress(uint16_t(mask >> 48),
                              output + 48 - count_ones(mask & 0xFFFFFFFFFFFF));
+    return 64 - count_ones(mask);
   }
 
   simdjson_really_inline uint64_t to_bitmask() const {

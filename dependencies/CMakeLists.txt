@@ -13,10 +13,15 @@ cmake_dependent_option(SIMDJSON_GOOGLE_BENCHMARKS "compile the Google Benchmark 
 if(SIMDJSON_GOOGLE_BENCHMARKS)
   set_off(BENCHMARK_ENABLE_TESTING)
   set_off(BENCHMARK_ENABLE_INSTALL)
+  set_off(BENCHMARK_ENABLE_WERROR)
 
-  import_dependency(google_benchmarks google/benchmark 8982e1e)
+  import_dependency(google_benchmarks google/benchmark f91b6b4)
   add_dependency(google_benchmarks)
 endif()
+
+# The bulk of our benchmarking and testing data has been moved simdjson/simdjson-data
+import_dependency(simdjson-data simdjson/simdjson-data a5b13babe65c1bba7186b41b43d4cbdc20a5c470)
+add_dependency(simdjson-data)
 
 # This prevents variables declared with set() from unnecessarily escaping and
 # should not be called more than once

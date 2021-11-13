@@ -111,11 +111,15 @@ inline char *padded_string::data() noexcept { return data_ptr; }
 
 inline padded_string::operator std::string_view() const { return std::string_view(data(), length()); }
 
-inline simdjson_result<padded_string> padded_string::load(const std::string &filename) noexcept {
+inline padded_string::operator padded_string_view() const noexcept {
+  return padded_string_view(data(), length(), length() + SIMDJSON_PADDING);
+}
+
+inline simdjson_result<padded_string> padded_string::load(std::string_view filename) noexcept {
   // Open the file
   SIMDJSON_PUSH_DISABLE_WARNINGS
   SIMDJSON_DISABLE_DEPRECATED_WARNING // Disable CRT_SECURE warning on MSVC: manually verified this is safe
-  std::FILE *fp = std::fopen(filename.c_str(), "rb");
+  std::FILE *fp = std::fopen(filename.data(), "rb");
   SIMDJSON_POP_DISABLE_WARNINGS
 
   if (fp == nullptr) {
@@ -127,14 +131,22 @@ inline simdjson_result<padded_string> padded_string::load(const std::string &fil
     std::fclose(fp);
     return IO_ERROR;
   }
+#if defined(SIMDJSON_VISUAL_STUDIO) && !SIMDJSON_IS_32BITS
+  __int64 llen = _ftelli64(fp);
+  if(llen == -1L) {
+    std::fclose(fp);
+    return IO_ERROR;
+  }
+#else
   long llen = std::ftell(fp);
   if((llen < 0) || (llen == LONG_MAX)) {
     std::fclose(fp);
     return IO_ERROR;
   }
+#endif
 
   // Allocate the padded_string
-  size_t len = (size_t) llen;
+  size_t len = static_cast<size_t>(llen);
   padded_string s(len);
   if (s.data() == nullptr) {
     std::fclose(fp);
