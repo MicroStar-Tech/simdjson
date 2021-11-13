@@ -1,3 +1,9 @@
+simdjson (1.0.2-1) UNRELEASED; urgency=medium
+
+  * New upstream version 1.0.2
+
+ -- Mo Zhou <lumin@debian.org>  Sat, 13 Nov 2021 15:17:49 -0500
+
 simdjson (0.8.1-1~exp1) experimental; urgency=medium
 
   * New upstream version 0.8.1
