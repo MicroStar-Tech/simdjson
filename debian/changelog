@@ -1,8 +1,9 @@
 simdjson (1.0.2-1) UNRELEASED; urgency=medium
 
-  * New upstream version 1.0.2
+  * New upstream version 1.0.2 (Closes: #984332)
+  * Update CMake flags to correctly build.
 
- -- Mo Zhou <lumin@debian.org>  Sat, 13 Nov 2021 15:17:49 -0500
+ -- Mo Zhou <lumin@debian.org>  Sat, 13 Nov 2021 15:22:26 -0500
 
 simdjson (0.8.1-1~exp1) experimental; urgency=medium
 
