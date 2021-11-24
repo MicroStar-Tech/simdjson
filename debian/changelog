@@ -1,3 +1,9 @@
+simdjson (1.0.2-2) unstable; urgency=medium
+
+  * Upload to unstable.
+
+ -- Mo Zhou <lumin@debian.org>  Wed, 24 Nov 2021 16:06:14 -0500
+
 simdjson (1.0.2-1) experimental; urgency=medium
 
   * New upstream version 1.0.2 (Closes: #984332)
