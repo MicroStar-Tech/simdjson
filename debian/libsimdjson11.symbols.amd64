@@ -1,9 +1,9 @@
 libsimdjson.so.11 libsimdjson11 #MINVER#
 * Build-Depends-Package: libsimdjson-dev
  _ZN8simdjson13validate_utf8EPKcm@Base 1.0.2
- _ZN8simdjson21active_implementationE@Base 1.0.2
  _ZN8simdjson22builtin_implementationEv@Base 1.0.2
- _ZN8simdjson25available_implementationsE@Base 1.0.2
+ _ZN8simdjson25get_active_implementationEv@Base 2.0.1
+ _ZN8simdjson29get_available_implementationsEv@Base 2.0.1
  _ZN8simdjson6minifyEPKcmPcRm@Base 1.0.2
  _ZN8simdjson7haswell14implementationD0Ev@Base 1.0.2
  _ZN8simdjson7haswell14implementationD1Ev@Base 1.0.2
@@ -17,6 +17,18 @@ libsimdjson.so.11 libsimdjson11 #MINVER#
  _ZN8simdjson7haswell25dom_parser_implementationD0Ev@Base 1.0.2
  _ZN8simdjson7haswell25dom_parser_implementationD1Ev@Base 1.0.2
  _ZN8simdjson7haswell25dom_parser_implementationD2Ev@Base 1.0.2
+ _ZN8simdjson7icelake14implementationD0Ev@Base 2.0.1
+ _ZN8simdjson7icelake14implementationD1Ev@Base 2.0.1
+ _ZN8simdjson7icelake14implementationD2Ev@Base 2.0.1
+ _ZN8simdjson7icelake25dom_parser_implementation11stage2_nextERNS_3dom8documentE@Base 2.0.1
+ _ZN8simdjson7icelake25dom_parser_implementation12set_capacityEm@Base 2.0.1
+ _ZN8simdjson7icelake25dom_parser_implementation13set_max_depthEm@Base 2.0.1
+ _ZN8simdjson7icelake25dom_parser_implementation5parseEPKhmRNS_3dom8documentE@Base 2.0.1
+ _ZN8simdjson7icelake25dom_parser_implementation6stage1EPKhmNS_11stage1_modeE@Base 2.0.1
+ _ZN8simdjson7icelake25dom_parser_implementation6stage2ERNS_3dom8documentE@Base 2.0.1
+ _ZN8simdjson7icelake25dom_parser_implementationD0Ev@Base 2.0.1
+ _ZN8simdjson7icelake25dom_parser_implementationD1Ev@Base 2.0.1
+ _ZN8simdjson7icelake25dom_parser_implementationD2Ev@Base 2.0.1
  _ZN8simdjson8fallback14implementationD0Ev@Base 1.0.2
  _ZN8simdjson8fallback14implementationD1Ev@Base 1.0.2
  _ZN8simdjson8fallback14implementationD2Ev@Base 1.0.2
@@ -47,6 +59,7 @@ libsimdjson.so.11 libsimdjson11 #MINVER#
  _ZN8simdjson8internal19parse_long_mantissaINS0_13binary_formatIdEEEENS0_17adjusted_mantissaEPKcS6_@Base 1.0.2
  _ZN8simdjson8internal20pshufb_combine_tableE@Base 1.0.2
  _ZN8simdjson8internal24structural_or_whitespaceE@Base 1.0.2
+ _ZN8simdjson8internal25get_unsupported_singletonEv@Base 2.0.1
  _ZN8simdjson8internal26unsupported_implementationD0Ev@Base 1.0.2
  _ZN8simdjson8internal26unsupported_implementationD1Ev@Base 1.0.2
  _ZN8simdjson8internal26unsupported_implementationD2Ev@Base 1.0.2
@@ -77,6 +90,9 @@ libsimdjson.so.11 libsimdjson11 #MINVER#
  _ZNK8simdjson7haswell14implementation13validate_utf8EPKcm@Base 1.0.2
  _ZNK8simdjson7haswell14implementation32create_dom_parser_implementationEmmRSt10unique_ptrINS_8internal25dom_parser_implementationESt14default_deleteIS4_EE@Base 1.0.2
  _ZNK8simdjson7haswell14implementation6minifyEPKhmPhRm@Base 1.0.2
+ _ZNK8simdjson7icelake14implementation13validate_utf8EPKcm@Base 2.0.1
+ _ZNK8simdjson7icelake14implementation32create_dom_parser_implementationEmmRSt10unique_ptrINS_8internal25dom_parser_implementationESt14default_deleteIS4_EE@Base 2.0.1
+ _ZNK8simdjson7icelake14implementation6minifyEPKhmPhRm@Base 2.0.1
  _ZNK8simdjson8fallback14implementation13validate_utf8EPKcm@Base 1.0.2
  _ZNK8simdjson8fallback14implementation32create_dom_parser_implementationEmmRSt10unique_ptrINS_8internal25dom_parser_implementationESt14default_deleteIS4_EE@Base 1.0.2
  _ZNK8simdjson8fallback14implementation6minifyEPKhmPhRm@Base 1.0.2
@@ -97,11 +113,11 @@ libsimdjson.so.11 libsimdjson11 #MINVER#
  _ZNK8simdjson8westmere14implementation13validate_utf8EPKcm@Base 1.0.2
  _ZNK8simdjson8westmere14implementation32create_dom_parser_implementationEmmRSt10unique_ptrINS_8internal25dom_parser_implementationESt14default_deleteIS4_EE@Base 1.0.2
  _ZNK8simdjson8westmere14implementation6minifyEPKhmPhRm@Base 1.0.2
- _ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEC1ISt17basic_string_viewIcS2_EvEERKT_RKS3_@Base 1.0.2
- _ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEC2ISt17basic_string_viewIcS2_EvEERKT_RKS3_@Base 1.0.2
  _ZTIN8simdjson14implementationE@Base 1.0.2
  _ZTIN8simdjson7haswell14implementationE@Base 1.0.2
  _ZTIN8simdjson7haswell25dom_parser_implementationE@Base 1.0.2
+ _ZTIN8simdjson7icelake14implementationE@Base 2.0.1
+ _ZTIN8simdjson7icelake25dom_parser_implementationE@Base 2.0.1
  _ZTIN8simdjson8fallback14implementationE@Base 1.0.2
  _ZTIN8simdjson8fallback25dom_parser_implementationE@Base 1.0.2
  _ZTIN8simdjson8internal25dom_parser_implementationE@Base 1.0.2
@@ -112,6 +128,8 @@ libsimdjson.so.11 libsimdjson11 #MINVER#
  _ZTSN8simdjson14implementationE@Base 1.0.2
  _ZTSN8simdjson7haswell14implementationE@Base 1.0.2
  _ZTSN8simdjson7haswell25dom_parser_implementationE@Base 1.0.2
+ _ZTSN8simdjson7icelake14implementationE@Base 2.0.1
+ _ZTSN8simdjson7icelake25dom_parser_implementationE@Base 2.0.1
  _ZTSN8simdjson8fallback14implementationE@Base 1.0.2
  _ZTSN8simdjson8fallback25dom_parser_implementationE@Base 1.0.2
  _ZTSN8simdjson8internal25dom_parser_implementationE@Base 1.0.2
@@ -122,8 +140,11 @@ libsimdjson.so.11 libsimdjson11 #MINVER#
  _ZTVN8simdjson14implementationE@Base 1.0.2
  _ZTVN8simdjson7haswell14implementationE@Base 1.0.2
  _ZTVN8simdjson7haswell25dom_parser_implementationE@Base 1.0.2
+ _ZTVN8simdjson7icelake14implementationE@Base 2.0.1
+ _ZTVN8simdjson7icelake25dom_parser_implementationE@Base 2.0.1
  _ZTVN8simdjson8fallback14implementationE@Base 1.0.2
  _ZTVN8simdjson8fallback25dom_parser_implementationE@Base 1.0.2
+ _ZTVN8simdjson8internal25dom_parser_implementationE@Base 2.0.1
  _ZTVN8simdjson8internal26unsupported_implementationE@Base 1.0.2
  _ZTVN8simdjson8internal49detect_best_supported_implementation_on_first_useE@Base 1.0.2
  _ZTVN8simdjson8westmere14implementationE@Base 1.0.2
