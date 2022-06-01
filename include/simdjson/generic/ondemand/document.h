@@ -94,6 +94,8 @@ public:
    *
    * The string is guaranteed to be valid UTF-8.
    *
+   * Important: Calling get_string() twice on the same document is an error.
+   *
    * @returns An UTF-8 string. The string is stored in the parser and will be invalidated the next
    *          time it parses a document or when it is destroyed.
    * @returns INCORRECT_TYPE if the JSON value is not a string.
@@ -267,7 +269,7 @@ public:
   simdjson_really_inline simdjson_result<size_t> count_fields() & noexcept;
   /**
    * Get the value at the given index in the array. This function has linear-time complexity.
-   * This function should only be called once as the array iterator is not reset between each call.
+   * This function should only be called once on an array instance since the array iterator is not reset between each call.
    *
    * @return The value at the given index, or:
    *         - INDEX_OUT_OF_BOUNDS if the array index is larger than an array length
@@ -311,6 +313,10 @@ public:
    * the code in Debug mode (or with the macro `SIMDJSON_DEVELOPMENT_CHECKS` set to 1): an
    * OUT_OF_ORDER_ITERATION error is generated.
    *
+   * You are expected to access keys only once. You should access the value corresponding to
+   * a key a single time. Doing object["mykey"].to_string()and then again object["mykey"].to_string()
+   * is an error.
+   *
    * @param key The key to look up.
    * @returns The value of the field, or NO_SUCH_FIELD if the field is not in the object.
    */
@@ -340,6 +346,10 @@ public:
    * content["asks"].get_array(). You can detect such mistakes by first compiling and running
    * the code in Debug mode (or with the macro `SIMDJSON_DEVELOPMENT_CHECKS` set to 1): an
    * OUT_OF_ORDER_ITERATION error is generated.
+   *
+   * You are expected to access keys only once. You should access the value corresponding to a key
+   * a single time. Doing object["mykey"].to_string() and then again object["mykey"].to_string()
+   * is an error.
    *
    * @param key The key to look up.
    * @returns The value of the field, or NO_SUCH_FIELD if the field is not in the object.
@@ -389,7 +399,14 @@ public:
    */
   simdjson_really_inline simdjson_result<bool> is_integer() noexcept;
   /**
-   * Determine the number type (integer or floating-point number).
+   * Determine the number type (integer or floating-point number) as quickly
+   * as possible. This function does not fully validate the input. It is
+   * useful when you only need to classify the numbers, without parsing them.
+   *
+   * If you are planning to retrieve the value or you need full validation,
+   * consider using the get_number() method instead: it will fully parse
+   * and validate the input, and give you access to the type:
+   * get_number().get_number_type().
    *
    * get_number_type() is number_type::unsigned_integer if we have
    * an integer greater or equal to 9223372036854775808
@@ -397,8 +414,7 @@ public:
    * integer that is less than 9223372036854775808
    * Otherwise, get_number_type() has value number_type::floating_point_number
    *
-   * This function req
-   * uires processing the number string, but it is expected
+   * This function requires processing the number string, but it is expected
    * to be faster than get_number().get_number_type() because it is does not
    * parse the number value.
    *
@@ -480,6 +496,17 @@ public:
   inline simdjson_result<const char *> current_location() noexcept;
 
   /**
+   * Returns the current depth in the document if in bounds.
+   *
+   * E.g.,
+   *  0 = finished with document
+   *  1 = document root value (could be [ or {, not yet known)
+   *  2 = , or } inside root array/object
+   *  3 = key or value inside root array/object.
+   */
+  simdjson_really_inline int32_t current_depth() const noexcept;
+
+  /**
    * Get the value associated with the given JSON pointer.  We use the RFC 6901
    * https://tools.ietf.org/html/rfc6901 standard.
    *
@@ -513,7 +540,7 @@ public:
   simdjson_really_inline simdjson_result<value> at_pointer(std::string_view json_pointer) noexcept;
   /**
    * Consumes the document and returns a string_view instance corresponding to the
-   * document as represented in JSON. It points inside the original byte array containg
+   * document as represented in JSON. It points inside the original byte array containing
    * the JSON document.
    */
   simdjson_really_inline simdjson_result<std::string_view> raw_json() noexcept;
@@ -599,6 +626,7 @@ public:
   simdjson_really_inline simdjson_result<bool> is_scalar() noexcept;
 
   simdjson_really_inline simdjson_result<const char *> current_location() noexcept;
+  simdjson_really_inline int32_t current_depth() const noexcept;
   simdjson_really_inline bool is_negative() noexcept;
   simdjson_really_inline simdjson_result<bool> is_integer() noexcept;
   simdjson_really_inline simdjson_result<number_type> get_number_type() noexcept;
@@ -665,6 +693,7 @@ public:
   simdjson_really_inline simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::json_type> type() noexcept;
   simdjson_really_inline simdjson_result<bool> is_scalar() noexcept;
   simdjson_really_inline simdjson_result<const char *> current_location() noexcept;
+  simdjson_really_inline int32_t current_depth() const noexcept;
   simdjson_really_inline bool is_negative() noexcept;
   simdjson_really_inline simdjson_result<bool> is_integer() noexcept;
   simdjson_really_inline simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::number_type> get_number_type() noexcept;
@@ -725,6 +754,7 @@ public:
   simdjson_really_inline simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::json_type> type() noexcept;
   simdjson_really_inline simdjson_result<bool> is_scalar() noexcept;
   simdjson_really_inline simdjson_result<const char *> current_location() noexcept;
+  simdjson_really_inline int32_t current_depth() const noexcept;
   simdjson_really_inline bool is_negative() noexcept;
   simdjson_really_inline simdjson_result<bool> is_integer() noexcept;
   simdjson_really_inline simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::number_type> get_number_type() noexcept;

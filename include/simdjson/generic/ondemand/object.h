@@ -44,6 +44,10 @@ public:
    * the code in Debug mode (or with the macro `SIMDJSON_DEVELOPMENT_CHECKS` set to 1): an
    * OUT_OF_ORDER_ITERATION error is generated.
    *
+   * You are expected to access keys only once. You should access the value corresponding to a
+   * key a single time. Doing object["mykey"].to_string() and then again object["mykey"].to_string()
+   * is an error.
+   *
    * @param key The key to look up.
    * @returns The value of the field, or NO_SUCH_FIELD if the field is not in the object.
    */
@@ -76,6 +80,9 @@ public:
    * content["asks"].get_array(). You can detect such mistakes by first compiling and running
    * the code in Debug mode (or with the macro `SIMDJSON_DEVELOPMENT_CHECKS` set to 1): an
    * OUT_OF_ORDER_ITERATION error is generated.
+   *
+   * You are expected to access keys only once. You should access the value corresponding to a key
+   * a single time. Doing object["mykey"].to_string() and then again object["mykey"].to_string() is an error.
    *
    * @param key The key to look up.
    * @returns The value of the field, or NO_SUCH_FIELD if the field is not in the object.
@@ -111,7 +118,7 @@ public:
    * instance: there is no rewind and no invalidation.
    *
    * You may call at_pointer more than once on an object, but each time the pointer is advanced
-   * to be within the value matched by the key indicated by the JSON pointer query. Thus any preceeding
+   * to be within the value matched by the key indicated by the JSON pointer query. Thus any preceding
    * key (as well as the current key) can no longer be used with following JSON pointer calls.
    *
    * Also note that at_pointer() relies on find_field() which implies that we do not unescape keys when matching.
@@ -161,7 +168,7 @@ public:
   simdjson_really_inline simdjson_result<size_t> count_fields() & noexcept;
   /**
    * Consumes the object and returns a string_view instance corresponding to the
-   * object as represented in JSON. It points inside the original byte array containg
+   * object as represented in JSON. It points inside the original byte array containing
    * the JSON document.
    */
   simdjson_really_inline simdjson_result<std::string_view> raw_json() noexcept;

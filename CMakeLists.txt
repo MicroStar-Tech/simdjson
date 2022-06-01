@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.14)
 project(
     simdjson
     # The version number is modified by tools/release.py
-    VERSION 1.0.2
+    VERSION 2.0.1
     DESCRIPTION "Parsing gigabytes of JSON per second"
     HOMEPAGE_URL "https://simdjson.org/"
     LANGUAGES CXX C
@@ -20,8 +20,8 @@ string(
 # ---- Options, variables ----
 
 # These version numbers are modified by tools/release.py
-set(SIMDJSON_LIB_VERSION "9.0.0" CACHE STRING "simdjson library version")
-set(SIMDJSON_LIB_SOVERSION "9" CACHE STRING "simdjson library soversion")
+set(SIMDJSON_LIB_VERSION "11.0.0" CACHE STRING "simdjson library version")
+set(SIMDJSON_LIB_SOVERSION "11" CACHE STRING "simdjson library soversion")
 
 option(SIMDJSON_ENABLE_THREADS "Link with thread support" ON)
 
@@ -49,19 +49,10 @@ endif()
 if(is_top_project)
   option(SIMDJSON_DEVELOPER_MODE "Enable targets for developing simdjson" OFF)
   option(BUILD_SHARED_LIBS "Build simdjson as a shared library" OFF)
-
-  if("$ENV{CI}")
-    set(SIMDJSON_DEVELOPER_MODE ON CACHE INTERNAL "")
-  endif()
 endif()
 
 include(cmake/handle-deprecations.cmake)
-
-if(SIMDJSON_DEVELOPER_MODE)
-  include(cmake/developer-options.cmake)
-else()
-  message(STATUS "Building only the library. Advanced users may want to turn SIMDJSON_DEVELOPER_MODE to ON, e.g., via -D SIMDJSON_DEVELOPER_MODE=ON.")
-endif()
+include(cmake/developer-options.cmake)
 
 # ---- simdjson library ----
 
@@ -180,6 +171,7 @@ endif()
 # ---- Developer mode extras ----
 
 if(NOT SIMDJSON_DEVELOPER_MODE)
+  message(STATUS "Building only the library. Advanced users may want to turn SIMDJSON_DEVELOPER_MODE to ON, e.g., via -D SIMDJSON_DEVELOPER_MODE=ON.")
   return()
 elseif(NOT is_top_project)
   message(AUTHOR_WARNING "Developer mode is intended for developers of simdjson")
