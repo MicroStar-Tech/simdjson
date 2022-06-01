@@ -62,6 +62,7 @@ template<> simdjson_really_inline simdjson_result<array> value::get() noexcept {
 template<> simdjson_really_inline simdjson_result<object> value::get() noexcept { return get_object(); }
 template<> simdjson_really_inline simdjson_result<raw_json_string> value::get() noexcept { return get_raw_json_string(); }
 template<> simdjson_really_inline simdjson_result<std::string_view> value::get() noexcept { return get_string(); }
+template<> simdjson_really_inline simdjson_result<number> value::get() noexcept { return get_number(); }
 template<> simdjson_really_inline simdjson_result<double> value::get() noexcept { return get_double(); }
 template<> simdjson_really_inline simdjson_result<uint64_t> value::get() noexcept { return get_uint64(); }
 template<> simdjson_really_inline simdjson_result<int64_t> value::get() noexcept { return get_int64(); }
@@ -178,6 +179,10 @@ simdjson_really_inline std::string_view value::raw_json_token() noexcept {
 
 simdjson_really_inline simdjson_result<const char *> value::current_location() noexcept {
   return iter.json_iter().current_location();
+}
+
+simdjson_really_inline int32_t value::current_depth() const noexcept{
+  return iter.json_iter().depth();
 }
 
 simdjson_really_inline simdjson_result<value> value::at_pointer(std::string_view json_pointer) noexcept {
@@ -397,6 +402,11 @@ simdjson_really_inline simdjson_result<std::string_view> simdjson_result<SIMDJSO
 simdjson_really_inline simdjson_result<const char *> simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::value>::current_location() noexcept {
   if (error()) { return error(); }
   return first.current_location();
+}
+
+simdjson_really_inline int32_t simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::value>::current_depth() const noexcept {
+  if (error()) { return error(); }
+  return first.current_depth();
 }
 
 simdjson_really_inline simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::value> simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::value>::at_pointer(std::string_view json_pointer) noexcept {
