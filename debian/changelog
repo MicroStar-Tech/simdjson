@@ -1,8 +1,11 @@
-simdjson (2.0.1-1) UNRELEASED; urgency=medium
+simdjson (2.0.1-1~exp1) experimental; urgency=medium
 
   * New upstream version 2.0.1 (May 2022)
+  * Bump SOVERSION to 11.
+  * Refresh symbols control file for amd64.
+  * Update copyright.
 
- -- Mo Zhou <lumin@debian.org>  Tue, 31 May 2022 20:15:13 -0700
+ -- Mo Zhou <lumin@debian.org>  Fri, 17 Jun 2022 22:24:19 -0700
 
 simdjson (1.0.2-2) unstable; urgency=medium
 
