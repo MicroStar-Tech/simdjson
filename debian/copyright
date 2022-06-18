@@ -23,11 +23,6 @@ Files: fuzz/*
 Copyright: 2020, Paul Dreik
 License: Apache-2.0
 
-Files: jsonexamples/small/jsoniter_scala/*.json
-Copyright: 2017 Andriy Plokhotnyuk, and respective contributors
-License: Expat
-Comment: https://github.com/plokhotnyuk/jsoniter-scala/blob/master/LICENSE
-
 Files: include/simdjson/internal/isadetection.h
 Copyright: Copyright (c) 2016-     Facebook, Inc            (Adam Paszke)
            Copyright (c) 2014-     Facebook, Inc            (Soumith Chintala)
