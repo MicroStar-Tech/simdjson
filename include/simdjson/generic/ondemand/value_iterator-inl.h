@@ -39,9 +39,22 @@ simdjson_warn_unused simdjson_really_inline simdjson_result<bool> value_iterator
   // current document. It only works in the normal mode where we have indexed a single document.
   // Note that adding a check for 'streaming' is not expensive since we only have at most
   // one root element.
-  if (! _json_iter->streaming() && (*_json_iter->peek_last() != '}')) {
-    _json_iter->abandon();
-    return report_error(INCOMPLETE_ARRAY_OR_OBJECT, "missing } at end");
+  if ( ! _json_iter->streaming() ) {
+    if (*_json_iter->peek_last() != '}') {
+      _json_iter->abandon();
+      return report_error(INCOMPLETE_ARRAY_OR_OBJECT, "missing } at end");
+    }
+    // If the last character is } *and* the first gibberish character is also '}'
+    // then on-demand could accidentally go over. So we need additional checks.
+    // https://github.com/simdjson/simdjson/issues/1834
+    // Checking that the document is balanced requires a full scan which is potentially
+    // expensive, but it only happens in edge cases where the first padding character is
+    // a closing bracket.
+    if ((*_json_iter->peek(_json_iter->end_position()) == '}') && (!_json_iter->balanced())) {
+      _json_iter->abandon();
+      // The exact error would require more work. It will typically be an unclosed object.
+      return report_error(INCOMPLETE_ARRAY_OR_OBJECT, "the document is unbalanced");
+    }
   }
   return started_object();
 }
@@ -167,6 +180,8 @@ simdjson_warn_unused simdjson_really_inline simdjson_result<bool> value_iterator
   return false;
 }
 
+SIMDJSON_PUSH_DISABLE_WARNINGS
+SIMDJSON_DISABLE_STRICT_OVERFLOW_WARNING
 simdjson_warn_unused simdjson_really_inline simdjson_result<bool> value_iterator::find_field_unordered_raw(const std::string_view key) noexcept {
   /**
    * When find_field_unordered_raw is called, we can either be pointing at the
@@ -354,6 +369,7 @@ simdjson_warn_unused simdjson_really_inline simdjson_result<bool> value_iterator
   // never reach this point.
   return false;
 }
+SIMDJSON_POP_DISABLE_WARNINGS
 
 simdjson_warn_unused simdjson_really_inline simdjson_result<raw_json_string> value_iterator::field_key() noexcept {
   assert_at_next();
@@ -408,9 +424,22 @@ simdjson_warn_unused simdjson_really_inline simdjson_result<bool> value_iterator
   // current document. It only works in the normal mode where we have indexed a single document.
   // Note that adding a check for 'streaming' is not expensive since we only have at most
   // one root element.
-  if ( ! _json_iter->streaming() && (*_json_iter->peek_last() != ']')) {
-    _json_iter->abandon();
-    return report_error(INCOMPLETE_ARRAY_OR_OBJECT, "missing ] at end");
+  if ( ! _json_iter->streaming() ) {
+    if (*_json_iter->peek_last() != ']') {
+      _json_iter->abandon();
+      return report_error(INCOMPLETE_ARRAY_OR_OBJECT, "missing ] at end");
+    }
+    // If the last character is ] *and* the first gibberish character is also ']'
+    // then on-demand could accidentally go over. So we need additional checks.
+    // https://github.com/simdjson/simdjson/issues/1834
+    // Checking that the document is balanced requires a full scan which is potentially
+    // expensive, but it only happens in edge cases where the first padding character is
+    // a closing bracket.
+    if ((*_json_iter->peek(_json_iter->end_position()) == ']') && (!_json_iter->balanced())) {
+      _json_iter->abandon();
+      // The exact error would require more work. It will typically be an unclosed array.
+      return report_error(INCOMPLETE_ARRAY_OR_OBJECT, "the document is unbalanced");
+    }
   }
   return started_array();
 }
@@ -444,7 +473,7 @@ simdjson_really_inline bool value_iterator::parse_null(const uint8_t *json) cons
 }
 
 simdjson_warn_unused simdjson_really_inline simdjson_result<std::string_view> value_iterator::get_string() noexcept {
-  return get_raw_json_string().unescape(_json_iter->string_buf_loc());
+  return get_raw_json_string().unescape(json_iter());
 }
 simdjson_warn_unused simdjson_really_inline simdjson_result<raw_json_string> value_iterator::get_raw_json_string() noexcept {
   auto json = peek_scalar("string");
