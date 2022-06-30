@@ -1,4 +1,4 @@
-name: Ubuntu 22.04 CI (GCC 11)
+name: Ubuntu 20.04 CI (GCC 8)
 
 on: [push, pull_request]
 
@@ -7,13 +7,18 @@ jobs:
     if: >-
       ! contains(toJSON(github.event.commits.*.message), '[skip ci]') &&
       ! contains(toJSON(github.event.commits.*.message), '[skip github]')
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-20.04
+    env:
+      CXX: g++-8
+      CC: gcc-8
     steps:
       - uses: actions/checkout@v3
       - uses: actions/cache@v3
         with:
           path: dependencies/.cache
           key: ${{ hashFiles('dependencies/CMakeLists.txt') }}
+      - name: Install GCC 8
+        run: sudo apt-get install -y g++-8
       - name: Use cmake
         run: |
           mkdir builddebug &&
