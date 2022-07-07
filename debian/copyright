@@ -58,7 +58,7 @@ Copyright: 2002, Todd C. Miller <Todd.Miller@courtesan.com>
 License: BSD-2-clause AND ISC
 
 Files: debian/*
-Copyright: 2019-2020, Mo Zhou <lumin@debian.org>
+Copyright: 2019-2022, Mo Zhou <lumin@debian.org>
 License: Apache-2.0
 
 License: Expat
