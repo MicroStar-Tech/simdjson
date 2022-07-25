@@ -245,27 +245,34 @@ transcode the UTF-8 strings produced by the simdjson library to other formats. S
 Using the Parsed JSON
 ---------------------
 
-
-
-We recommend that you first compile and run your code in Debug mode (with `NDEBUG`
-undefined). When you do so, the simdjson library runs additional sanity tests on
-your code to help ensure that you are using the library in a safe manner. Once
-your code has been tested, you can then run it in Release mode (with `NDEBUG`
-defined) for best performance. Alternatively, you can set the macro
-`SIMDJSON_DEVELOPMENT_CHECKS` to 1 prior to including the `simdjson.h` header
-to enable these additional checks: just make sure you remove the definition once your
-code has been tested.
+We recommend that you first compile and run your code in Debug mode: under Visual Studio,
+it means having the `_DEBUG` macro defined, and, for other compilers, it means leaving
+the `__OPTIMIZE__` macro undefined. The simdjson code will set `SIMDJSON_DEVELOPMENT_CHECKS=1`.
+Alternatively, you can set the macro `SIMDJSON_DEVELOPMENT_CHECKS` to 1 prior to including
+the `simdjson.h` header to enable these additional checks: just make sure you remove the
+definition once your code has been tested. When `SIMDJSON_DEVELOPMENT_CHECKS` is set to 1, the
+simdjson library runs additional (expensive) tests on your code to help ensure that you are
+using the library in a safe manner. Once your code has been tested, you can then run it in
+Release mode: under Visual Studio, it means having the `_DEBUG` macro undefined, and, for other
+compilers, it means setting `__OPTIMIZE__` to a positive integer. You can also forcefully
+disable these checks by setting `SIMDJSON_DEVELOPMENT_CHECKS` to 0. Once your code is tested, we
+further encourage you to define `NDEBUG` in your Release builds to disable additional runtime
+testing and get the best performance.
 
 Once you have a document (`simdjson::ondemand::document`), you can navigate it with
 idiomatic C++ iterators, operators and casts. Besides the document instances and
 native types (`double`, `uint64_t`, `int64_t`, `bool`), we also access
 Unicode (UTF-8) strings (`std::string_view`), objects (`simdjson::ondemand::object`)
 and arrays (`simdjson::ondemand::array`).
-We also have a generic type (`simdjson::ondemand::value`) which represents a potential
+We also have a generic ephemeral type (`simdjson::ondemand::value`) which represents a potential
 array or object, or scalar type (`double`, `uint64_t`, `int64_t`, `bool`, `null`, string) inside
 an array or an object. Both generic types (`simdjson::ondemand::document` and
 `simdjson::ondemand::value`) have a `type()` method returning a `json_type` value describing the
-value (`json_type::array`, `json_type::object`, `json_type::number`, `json_type::string`, `json_type::boolean`, `json_type::null`).
+value (`json_type::array`, `json_type::object`, `json_type::number`, `json_type::string`,
+`json_type::boolean`, `json_type::null`). A generic value (`simdjson::ondemand::value`)
+is only valid temporarily, as soon as you access other values, other keys in objects, etc.
+it becomes invalid: you should therefore consume the value immediately by converting it to a
+scalar type, an array or an object.
 
 Advanced users who need to determine the number types (integer or float) dynamically,
 should review our section [dynamic number types](#dynamic-number-types). Indeed,
@@ -300,10 +307,12 @@ support for users who avoid exceptions. See [the simdjson error handling documen
   comparison. For efficiency reason, you should avoid looking up the same field repeatedly: e.g., do
   not do `object["foo"]` followed by `object["foo"]` with the same `object` instance. If you consume an
   object twice: `std::string_view(object["foo"]` followed by `std::string_view(object["foo"]`, your code
-  is in error. Furthermore, you can only consume one field at a time, on the same object. Thus
-  if you have retrieved `content["bids"].get_array()` and you later call `content["asks"].get_array()`, then the
-  first array should no longer be accessed: it would be unsafe to do so. You can detect such mistakes by first
-  compiling and running the code in Debug mode: an OUT_OF_ORDER_ITERATION error is generated.
+  is in error. Furthermore, you can only consume one field at a time, on the same object. The
+  value instance you get from  `content["bids"]` becomes invalid when you call `content["asks"]`.
+  If you have retrieved `content["bids"].get_array()` and you later call
+  `content["asks"].get_array()`, then the first array should no longer be accessed: it would be
+  unsafe to do so. You can detect such mistakes by first compiling and running the code in
+  Debug mode: an OUT_OF_ORDER_ITERATION error is generated.
 
   > NOTE: JSON allows you to escape characters in keys. E.g., the key `"date"` may be written as
   > `"\u0064\u0061\u0074\u0065"`. By default, simdjson does *not* unescape keys when matching by default.
