@@ -1,3 +1,9 @@
+simdjson (2.2.2-1) UNRELEASED; urgency=medium
+
+  * New upstream version 2.2.2 (July 2022)
+
+ -- Mo Zhou <lumin@debian.org>  Thu, 28 Jul 2022 19:24:09 -0700
+
 simdjson (2.2.1-1~exp1) experimental; urgency=medium
 
   * New upstream version 2.2.1 (July 2022)
