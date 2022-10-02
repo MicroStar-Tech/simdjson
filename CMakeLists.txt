@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.14)
 project(
     simdjson
     # The version number is modified by tools/release.py
-    VERSION 2.2.2
+    VERSION 2.2.3
     DESCRIPTION "Parsing gigabytes of JSON per second"
     HOMEPAGE_URL "https://simdjson.org/"
     LANGUAGES CXX C
@@ -150,6 +150,24 @@ install(
     NAMESPACE simdjson::
     DESTINATION "${SIMDJSON_INSTALL_CMAKEDIR}"
     COMPONENT example_Development
+)
+
+# pkg-config
+include(cmake/JoinPaths.cmake)
+join_paths(PKGCONFIG_INCLUDEDIR "\${prefix}" "${CMAKE_INSTALL_INCLUDEDIR}")
+join_paths(PKGCONFIG_LIBDIR "\${prefix}" "${CMAKE_INSTALL_LIBDIR}")
+
+if(SIMDJSON_ENABLE_THREADS)
+  set(PKGCONFIG_CFLAGS "-DSIMDJSON_THREADS_ENABLED=1")
+  if(CMAKE_THREAD_LIBS_INIT)
+    set(PKGCONFIG_LIBS_PRIVATE "Libs.private: ${CMAKE_THREAD_LIBS_INIT}")
+  endif()
+endif()
+
+configure_file("simdjson.pc.in" "simdjson.pc" @ONLY)
+install(
+    FILES "${CMAKE_CURRENT_BINARY_DIR}/simdjson.pc"
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig"
 )
 
 #
