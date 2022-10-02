@@ -1,4 +1,4 @@
-simdjson (2.2.3-1) UNRELEASED; urgency=medium
+simdjson (2.2.3-1~exp1) experimental; urgency=medium
 
   [ Debian Janitor ]
   * Set upstream metadata fields: Bug-Database, Bug-Submit, Repository,
@@ -7,8 +7,9 @@ simdjson (2.2.3-1) UNRELEASED; urgency=medium
 
   [ Mo Zhou ]
   * New upstream version 2.2.3
+  * Install the new pkg-config file.
 
- -- Mo Zhou <lumin@debian.org>  Sun, 02 Oct 2022 17:35:47 -0400
+ -- Mo Zhou <lumin@debian.org>  Sun, 02 Oct 2022 19:36:09 -0400
 
 simdjson (2.2.2-1~exp1) experimental; urgency=medium
 
