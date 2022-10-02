@@ -1,3 +1,15 @@
+simdjson (2.2.3-1) UNRELEASED; urgency=medium
+
+  [ Debian Janitor ]
+  * Set upstream metadata fields: Bug-Database, Bug-Submit, Repository,
+    and Repository-Browse.
+  * Update standards version to 4.6.1, no changes needed.
+
+  [ Mo Zhou ]
+  * New upstream version 2.2.3
+
+ -- Mo Zhou <lumin@debian.org>  Sun, 02 Oct 2022 17:35:47 -0400
+
 simdjson (2.2.2-1~exp1) experimental; urgency=medium
 
   * New upstream version 2.2.2 (July 2022)
